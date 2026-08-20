@@ -12,7 +12,6 @@ const projectId = computed(() => String(route.params.id || ''))
       <RouterLink to="/">工作台</RouterLink>
       <span> / {{ projectId }}</span>
     </div>
-    <div class="kicker">Brief</div>
     <div class="headline">
       <h1>需求详情</h1>
       <RouterLink class="btn" to="/">返回</RouterLink>

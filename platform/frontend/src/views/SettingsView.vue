@@ -46,7 +46,6 @@ onMounted(load)
 
 <template>
   <div>
-    <div class="kicker">Settings</div>
     <div class="headline">
       <h1>设置</h1>
       <button class="btn" type="button" :disabled="loading" @click="load">刷新</button>

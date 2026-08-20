@@ -73,7 +73,6 @@ onMounted(load)
 
 <template>
   <div>
-    <div class="kicker">Workbench</div>
     <div class="headline">
       <h1>工作台</h1>
       <div class="tools">

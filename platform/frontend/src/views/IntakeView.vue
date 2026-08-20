@@ -16,7 +16,6 @@ function onSubmit() {
 
 <template>
   <div>
-    <div class="kicker">New brief</div>
     <div class="headline">
       <h1>提出需求</h1>
       <RouterLink class="btn" to="/">返回</RouterLink>
