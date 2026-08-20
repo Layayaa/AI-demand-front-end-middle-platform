@@ -1,7 +1,21 @@
 /* 轻量 Markdown 渲染器（安全：先转义 HTML，再解析） */
 (function (global) {
+  /* 展示层去掉表情符号（含 Emoji、符号变体、部分装饰性符号），保留中文与流程箭头 */
+  function stripEmoji(s) {
+    return String(s == null ? '' : s)
+      .replace(/[\uFE00-\uFE0F]/g, '')
+      .replace(/\u200D/g, '')
+      .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
+      .replace(/[\u{2300}-\u{23FF}]/gu, '')
+      .replace(/[\u{2600}-\u{27BF}]/gu, '')
+      .replace(/[\u{2B00}-\u{2BFF}]/gu, '')
+      .replace(/[\u20E3]/g, '')
+      .replace(/[✓✔✕✖★☆▶►]/g, '')
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/^[ \t]+|[ \t]+$/gm, '');
+  }
   function esc(s) {
-    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return stripEmoji(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
   function inline(s) {
     s = esc(s);
@@ -34,7 +48,7 @@
   }
   function render(md) {
     if (!md) return '';
-    const lines = String(md).split(/\r?\n/);
+    const lines = stripEmoji(md).split(/\r?\n/);
     let html = '';
     let i = 0;
     let listType = null, inCode = false, codeBuf = [], tableBuf = null;
@@ -79,5 +93,5 @@
     flushTable(); flushList();
     return html;
   }
-  global.MD = { render, inline, esc };
+  global.MD = { render, inline, esc, stripEmoji };
 })(window);

@@ -15,7 +15,7 @@
     const root = document.getElementById('toastRoot');
     const el = document.createElement('div');
     el.className = 'toast ' + (type || '');
-    el.textContent = msg;
+    el.textContent = MD.stripEmoji(msg);
     root.appendChild(el);
     setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 350); }, 2600);
   }

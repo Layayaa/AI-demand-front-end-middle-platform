@@ -123,10 +123,10 @@
     list.forEach(c => {
       const b = document.createElement('button');
       b.className = 'chip-btn';
-      b.textContent = c;
+      b.textContent = MD.stripEmoji(c);
       b.addEventListener('click', () => {
         const inp = document.getElementById('chatInput');
-        inp.value = c;
+        inp.value = MD.stripEmoji(c);
         send();
       });
       row.appendChild(b);
