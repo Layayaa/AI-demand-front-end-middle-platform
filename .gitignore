@@ -18,3 +18,12 @@ Requirements_Analysis_Automation-master-9bccd509d127ee0f29744368217a86f1a54221be
 .env
 .env.*
 !.env.example
+
+# Future platform runtime artifacts
+platform/backend/.venv/
+platform/backend/__pycache__/
+platform/backend/app/__pycache__/
+platform/backend/data/uploads/
+platform/backend/data/exports/
+platform/frontend/node_modules/
+platform/frontend/dist/
