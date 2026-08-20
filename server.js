@@ -30,6 +30,7 @@ const llm = require('./lib/engine/llm');
 const hybrid = require('./lib/engine/hybrid');
 const knowledge = require('./lib/knowledge');
 const { seedIfEmpty } = require('./lib/seed');
+const { stripDeep, stripEmoji } = require('./lib/strip-emoji');
 
 const PORT = process.env.PORT || 3210;
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -46,7 +47,7 @@ const MIME = {
 };
 
 function sendJson(res, code, obj) {
-  const body = JSON.stringify(obj);
+  const body = JSON.stringify(stripDeep(obj));
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(body);
 }
@@ -119,12 +120,12 @@ async function chatEndpoint(req, body) {
   }
   if (!aiText) {
     if (turn.done) {
-      aiText = '✅ 需求画像已确认！完整度 **' + (profile.completeness || 0) + '%**。\n\n点击右侧「**生成三档方案**」，我会输出初级、中级、高级三档，每档各含产品版与技术版，共 6 份文档。';
+      aiText = '需求画像已确认。完整度 **' + (profile.completeness || 0) + '%**。\n\n点击右侧「**生成三档方案**」，我会输出初级、中级、高级三档，每档各含产品版与技术版，共 6 份文档。';
     } else if (turn.confirmReady || profile.stage === 'confirm') {
       aiText = interview.buildSummary(profile);
     } else if (turn.typeUnclear || (profile.stage === 'type' && !profile.type)) {
       const q = interview.buildNextQuestion(profile);
-      aiText = '我还没太明白这个需求属于哪种形态 🤔\n\n' + q.text;
+      aiText = '我还没太明白这个需求属于哪种形态。\n\n' + q.text;
     } else {
       const q = interview.buildNextQuestion(profile);
       let prefix = '';
@@ -241,7 +242,8 @@ function serveStatic(req, res, pathname) {
       return;
     }
     const ext = path.extname(full).toLowerCase();
-    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
+    const cache = ext === '.html' ? 'no-store' : 'no-cache';
+    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': cache });
     res.end(data);
   });
 }
@@ -354,7 +356,7 @@ route('POST', '/api/requirements', async (req, body) => {
   // 首条 AI 欢迎语（顾问式：让业务直接描述，AI 自己判断）
   r.chat.push({
     role: 'assistant',
-    content: `你好 👋 我是你的 **AI 需求顾问**，收到需求「**${title}**」${r.department ? `（${r.department}）` : ''}。\n\n在出方案之前，我想先帮你把这个需求**聊清楚**，这样出来的方案才真正可落地。\n\n你可以直接告诉我：\n\n1. **想解决什么问题**（业务场景、现状痛点）\n2. **现在是怎么做的**（靠人判断？还是多步流程？大概多久一次？）\n3. **希望达成什么效果**\n\n不用讲究格式，想到什么说什么，我来帮你梳理成清晰的方案。`,
+    content: `你好，我是你的 **AI 需求顾问**，收到需求「**${title}**」${r.department ? `（${r.department}）` : ''}。\n\n在出方案之前，我想先帮你把这个需求**聊清楚**，这样出来的方案才真正可落地。\n\n你可以直接告诉我：\n\n1. **想解决什么问题**（业务场景、现状痛点）\n2. **现在是怎么做的**（靠人判断？还是多步流程？大概多久一次？）\n3. **希望达成什么效果**\n\n不用讲究格式，想到什么说什么，我来帮你梳理成清晰的方案。`,
     at: new Date().toISOString()
   });
   d.requirements.unshift(r);
@@ -413,7 +415,7 @@ route('GET', '/api/requirements/([^/]+)/documents/([^/]+)/(overview|product|tech
   const docx = require('./lib/docx');
   const tierLabel = { basic: '初级方案', intermediate: '中级方案', advanced: '高级方案' }[tier] || tier;
   const docLabel = doc === 'product' ? '产品版' : doc === 'tech' ? '技术版' : '速览';
-  const md = r.plans[tier][doc];
+  const md = stripEmoji(r.plans[tier][doc]);
   const meta = `需求前置分析平台 · 自动生成 · ${r.title} · 生成于 ${new Date(r.plans[tier].generatedAt || Date.now()).toLocaleString('zh-CN')}`;
   const buf = docx.mdToDocx(md, `${tierLabel}${doc === 'product' || doc === 'tech' ? ' · ' + docLabel : ' · 速览'}：${r.title}`, meta);
   const fname = encodeURIComponent(`${r.title}_${tierLabel}_${docLabel}.docx`);
@@ -476,7 +478,7 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   seedIfEmpty();
   console.log('──────────────────────────────────────────────');
-  console.log('  需求前置分析平台已启动 ✅');
+  console.log('  需求前置分析平台已启动');
   console.log(`  访问地址: http://localhost:${PORT}`);
   console.log('  (Ctrl+C 停止)');
   console.log('──────────────────────────────────────────────');

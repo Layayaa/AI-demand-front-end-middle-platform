@@ -3,42 +3,47 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>需求前置分析平台</title>
-<link rel="stylesheet" href="/css/style.css">
+<title>需求前置</title>
+<meta http-equiv="Cache-Control" content="no-store" />
+<link rel="stylesheet" href="/css/style.css?v=plain2">
 </head>
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand">
-      <div class="brand-logo">🧭</div>
-      <div>
-        <div class="brand-name">需求前置分析平台</div>
-        <div class="brand-sub">AI 前置澄清 · 三档方案 · 价值优先级</div>
-      </div>
+    <a class="brand" href="#/dashboard">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>
+        <span class="brand-name">需求前置</span>
+        <span class="brand-sub" id="roleSub">提需业务</span>
+      </span>
+    </a>
+    <div class="role-switch" role="tablist" aria-label="使用身份">
+      <button type="button" data-role-set="submitter">提需</button>
+      <button type="button" data-role-set="reviewer">产品/业务</button>
     </div>
     <nav class="nav" id="nav">
-      <a href="#/dashboard" data-nav="dashboard" class="nav-item"><span>📋</span>工作台</a>
-      <a href="#/new" data-nav="new" class="nav-item"><span>✨</span>新建需求 · AI澄清</a>
-      <a href="#/priority" data-nav="priority" class="nav-item"><span>🎯</span>价值优先级</a>
-      <a href="#/settings" data-nav="settings" class="nav-item"><span>⚙️</span>设置</a>
+      <a href="#/dashboard" data-nav="dashboard" data-for="submitter reviewer" class="nav-item">工作台</a>
+      <a href="#/new" data-nav="new" data-for="submitter" class="nav-item">提出需求</a>
+      <a href="#/priority" data-nav="priority" data-for="reviewer" class="nav-item">价值优先级</a>
+      <a href="#/settings" data-nav="settings" data-for="reviewer" class="nav-item">设置</a>
     </nav>
     <div class="sidebar-foot">
-      <div class="ai-mode-badge" id="aiModeBadge">🤖 内置AI引擎</div>
-      <div class="sidebar-tip">基于《单点决策拆解表》<br>《SOP流程拆解表》方法论</div>
+      <div class="ai-mode-badge" id="aiModeBadge">内置引擎</div>
     </div>
   </aside>
   <main class="main" id="main"></main>
 </div>
 <div id="toastRoot" class="toast-root"></div>
 <div id="modalRoot"></div>
-<script src="/js/markdown.js"></script>
-<script src="/js/api.js"></script>
-<script src="/js/ui.js"></script>
-<script src="/js/views/dashboard.js"></script>
-<script src="/js/views/intake.js"></script>
-<script src="/js/views/detail.js"></script>
-<script src="/js/views/priority.js"></script>
-<script src="/js/views/settings.js"></script>
-<script src="/js/app.js"></script>
+<script src="/js/markdown.js?v=plain2"></script>
+<script src="/js/api.js?v=plain2"></script>
+<script src="/js/ui.js?v=plain2"></script>
+<script src="/js/role.js?v=plain2"></script>
+<script src="/js/views/dashboard.js?v=plain2"></script>
+<script src="/js/views/intake.js?v=plain2"></script>
+<script src="/js/views/detail.js?v=plain2"></script>
+<script src="/js/views/priority.js?v=plain2"></script>
+<script src="/js/views/settings.js?v=plain2"></script>
+<script src="/js/app.js?v=plain2"></script>
 </body>
 </html>

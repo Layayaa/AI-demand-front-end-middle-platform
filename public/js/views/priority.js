@@ -4,7 +4,7 @@
     const main = document.getElementById('main');
     main.innerHTML = `
       <div class="page-head"><div><h1>价值优先级分析</h1><div class="sub">AI 按统一模型给每个需求打分排序，回答「先做哪个」</div></div>
-        <button class="btn" id="refresh">↻ 重新分析</button></div>
+        <button class="btn" id="refresh">重新分析</button></div>
       <div class="card card-pad mb16">
         <div class="card-title">评分模型</div>
         <div class="card-sub">价值大小(35) + 发生频率(15) + 耗时投入(15) + 影响维度(12) + 自动化潜力(15) + 参与人数(8)，总分 100。≥80=P0 立即做 · 60~79=P1 本季度做 · &lt;60=P2 暂缓/合并</div>
@@ -25,13 +25,13 @@
     const data = await API.priority();
     const items = data.items;
     if (!items.length) {
-      box.innerHTML = '<div class="card card-pad empty"><div class="big">🎯</div>暂无需求。先 <a class="link" href="#/new">新建需求</a> 并完成澄清，即可参与价值排序。</div>';
+      box.innerHTML = '<div class="card card-pad empty">暂无需求。先完成澄清后再看价值排序。</div>';
       return;
     }
     const color = (l) => l === 'P0' ? '#dc2626' : l === 'P1' ? '#d97706' : '#64748b';
     box.innerHTML = items.map((i, idx) => `
       <div class="card pri-card mb12" style="cursor:pointer" data-id="${i.id}">
-        <div class="pri-score" style="background:${color(i.level)}">${i.score}</div>
+        <div class="pri-score-text">${i.score}<span>分</span></div>
         <div class="pri-main">
           <div class="flex-between">
             <div>
@@ -42,7 +42,7 @@
           </div>
           <div class="score-bar mt8"><i style="width:${i.score}%;background:${color(i.level)}"></i></div>
           <div class="pri-reasons">${i.reasons.map(r => '<span class="pri-reason">' + UI.esc(r) + '</span>').join('')}</div>
-          <div class="pri-rec">👉 <b>建议：</b>${UI.esc(i.recommendation)}</div>
+          <div class="pri-rec"><b>建议：</b>${UI.esc(i.recommendation)}</div>
         </div>
       </div>`).join('');
     box.querySelectorAll('.pri-card').forEach(c => {

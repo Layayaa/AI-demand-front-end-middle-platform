@@ -14,4 +14,4 @@ if (!input || !output) {
 const md = fs.readFileSync(input, 'utf8');
 const buf = mdToDocx(md, title || path.basename(input, '.md'), meta || '');
 fs.writeFileSync(output, buf);
-console.log(`✅ 已生成 ${output}（${(buf.length / 1024).toFixed(1)} KB）`);
+console.log(`已生成 ${output}（${(buf.length / 1024).toFixed(1)} KB）`);

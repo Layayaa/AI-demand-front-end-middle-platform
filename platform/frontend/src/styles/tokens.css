@@ -1,0 +1,16 @@
+:root {
+  --bg: #f7f4ee;
+  --fg: #2c2c24;
+  --muted: #6f6d63;
+  --line: #e2ddd4;
+  --panel: #fffcf7;
+  --primary: #5d7052;
+  --primary-fg: #f3f4f1;
+  --warn: #9a7040;
+  --danger: #a85448;
+  --ok: #5d7052;
+  --sidebar: #f3efe6;
+  --font: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Nunito", sans-serif;
+  --radius: 8px;
+  --ring: 0 0 0 2px var(--bg), 0 0 0 4px rgba(93, 112, 82, 0.35);
+}

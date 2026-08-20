@@ -2,9 +2,19 @@
 (function () {
   async function route() {
     const hash = location.hash || '#/dashboard';
-    const parts = hash.slice(2).split('/'); // 去掉 '#/'
-    const name = parts[0] || 'dashboard';
+    const parts = hash.slice(2).split('/');
+    let name = parts[0] || 'dashboard';
     const arg = parts.slice(1).join('/');
+
+    if (!Role.isReviewer() && (name === 'priority' || name === 'settings')) {
+      location.hash = '#/dashboard';
+      return;
+    }
+    if (Role.isReviewer() && name === 'new' && !arg) {
+      location.hash = '#/dashboard';
+      return;
+    }
+
     const nav = document.getElementById('nav');
     const activeKey = name === 'req' || name === 'new' ? (name === 'new' ? 'new' : 'dashboard') : name;
     nav.querySelectorAll('.nav-item').forEach(a => a.classList.toggle('active', a.getAttribute('data-nav') === activeKey));
@@ -26,18 +36,27 @@
       else { location.hash = '#/dashboard'; }
     } catch (e) {
       console.error(e);
-      main.innerHTML = '<div class="card card-pad empty"><div class="big">⚠️</div>页面加载失败：' + UI.esc(e.message) + '<div class="mt12"><button class="btn btn-primary" onclick="location.hash=\'#/dashboard\'">返回工作台</button></div></div>';
+      main.innerHTML = '<div class="card card-pad empty">页面加载失败：' + UI.esc(e.message) + '<div class="mt12"><button class="btn btn-primary" onclick="location.hash=\'#/dashboard\'">返回工作台</button></div></div>';
     }
   }
 
   async function boot() {
+    Role.apply();
+    document.querySelectorAll('[data-role-set]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        Role.set(btn.getAttribute('data-role-set'));
+        location.hash = '#/dashboard';
+        route();
+      });
+    });
+    window.addEventListener('ui-role-change', () => Role.apply());
+
     try {
-      const h = await API.health();
       const s = await API.getSettings();
       const badge = document.getElementById('aiModeBadge');
-      if (badge) badge.textContent = s.aiMode === 'llm' ? '🌐 大模型API模式' : '🤖 内置AI引擎';
+      if (badge) badge.textContent = s.aiMode === 'llm' ? '大模型 API' : '内置引擎';
     } catch (e) {
-      document.getElementById('main').innerHTML = '<div class="card card-pad empty"><div class="big">📡</div>无法连接服务：' + UI.esc(e.message) + '<div class="mt12 muted text-sm">请确认已通过 <code>node server.js</code> 启动后端服务</div></div>';
+      document.getElementById('main').innerHTML = '<div class="card card-pad empty">无法连接服务：' + UI.esc(e.message) + '<div class="mt12 muted text-sm">请确认已通过 <code>node server.js</code> 启动</div></div>';
       return;
     }
     window.addEventListener('hashchange', route);

@@ -7,8 +7,20 @@
     cur = await API.getRequirement(rid);
     if (!cur) { location.hash = '#/dashboard'; return; }
     if (['plans', 'profile', 'value', 'progress'].includes(tabHint)) tab = tabHint;
+    if (!Role.isReviewer() && tab === 'value') tab = 'plans';
     const main = document.getElementById('main');
     const v = cur.value;
+    const reviewer = Role.isReviewer();
+    const valueChip = reviewer && v
+      ? '<span class="chip ' + (v.level === 'P0' ? 'lvl-P0' : v.level === 'P1' ? 'lvl-P1' : 'lvl-P2') + '">' + v.level + ' · ' + v.score + ' 分</span>'
+      : '';
+    const valueTab = reviewer ? '<div class="tab" data-t="value">价值分析</div>' : '';
+    const confirmBtn = reviewer
+      ? '<button class="btn btn-success" id="confirmDone">确认完成</button>'
+      : '';
+    const chatBtn = reviewer
+      ? ''
+      : '<button class="btn btn-primary" id="goChat">继续澄清</button>';
     main.innerHTML = `
       <div class="detail-head card card-pad">
         <div class="info">
@@ -20,20 +32,19 @@
           <div class="flex mt12" style="gap:12px">
             ${UI.statusChip(cur.status)}
             <div class="flex" style="gap:6px"><div class="progress" style="width:160px"><i style="width:${UI.pct(cur.status)}%"></i></div><span class="text-xs muted">${UI.pct(cur.status)}%</span></div>
-            ${v ? '<span class="chip ' + (v.level === 'P0' ? 'lvl-P0' : v.level === 'P1' ? 'lvl-P1' : 'lvl-P2') + '">' + v.level + ' · ' + v.score + ' 分</span>' : ''}
+            ${valueChip}
           </div>
         </div>
         <div class="flex">
-          <button class="btn" id="goChat">💬 继续 AI 澄清</button>
-          <button class="btn btn-success" id="confirmDone">✓ 业务确认完成</button>
-          <button class="btn btn-sm btn-danger-soft" id="delReq" style="display:none">删除</button>
+          ${chatBtn}
+          ${confirmBtn}
         </div>
       </div>
       <div class="tabs">
-        <div class="tab" data-t="plans">📄 三档方案</div>
-        <div class="tab" data-t="profile">📋 需求画像</div>
-        <div class="tab" data-t="value">🎯 价值分析</div>
-        <div class="tab" data-t="progress">🕐 进度记录</div>
+        <div class="tab" data-t="plans">方案</div>
+        <div class="tab" data-t="profile">需求画像</div>
+        ${valueTab}
+        <div class="tab" data-t="progress">进度</div>
       </div>
       <div id="tabBody"></div>`;
 
@@ -44,8 +55,10 @@
         renderTab();
       });
     });
-    document.getElementById('goChat').addEventListener('click', () => { location.hash = '#/new/' + id; });
-    document.getElementById('confirmDone').addEventListener('click', confirmDone);
+    const chat = document.getElementById('goChat');
+    if (chat) chat.addEventListener('click', () => { location.hash = '#/new/' + id; });
+    const done = document.getElementById('confirmDone');
+    if (done) done.addEventListener('click', confirmDone);
     renderTab();
   }
 
@@ -53,7 +66,7 @@
     UI.confirmModal('确认完成？', '标记为「已完成」后，该需求将从待评审清单移出。', '确认完成').then(async (ok) => {
       if (!ok) return;
       await API.setStatus(id, 'done', '业务确认完成');
-      UI.toast('已标记完成 🎉', 'ok');
+      UI.toast('已标记完成', 'ok');
       cur = await API.getRequirement(id);
       location.hash = '#/req/' + id;
     });
@@ -72,14 +85,14 @@
   function renderPlans(box) {
     const plans = cur.plans;
     if (!plans || !plans.basic) {
-      box.innerHTML = '<div class="card card-pad empty"><div class="big">📄</div>方案尚未生成。先完成 AI 前置澄清，再点击「生成三档方案」。' +
+      box.innerHTML = '<div class="card card-pad empty">方案尚未生成。先完成澄清，再点击「生成三档方案」。' +
         '<div class="mt12"><button class="btn btn-primary" onclick="location.hash=\'#/new/' + id + '\'">继续 AI 澄清</button></div></div>';
       return;
     }
     const tiers = [
-      { key: 'basic', name: '初级方案', desc: '快速判断 · 产品版 + 技术版', cls: 'chip-tier-basic', ic: '🚀' },
-      { key: 'intermediate', name: '中级方案', desc: '可评审方案 · 产品版 + 技术版', cls: 'chip-tier-intermediate', ic: '📐' },
-      { key: 'advanced', name: '高级方案', desc: '完整立项 · 产品版(PRD) + 技术版', cls: 'chip-tier-advanced', ic: '🏗️' }
+      { key: 'basic', name: '初级方案', desc: '快速判断 · 产品版 + 技术版', cls: 'chip-tier-basic' },
+      { key: 'intermediate', name: '中级方案', desc: '可评审方案 · 产品版 + 技术版', cls: 'chip-tier-intermediate' },
+      { key: 'advanced', name: '高级方案', desc: '完整立项 · 产品版(PRD) + 技术版', cls: 'chip-tier-advanced' }
     ];
     box.innerHTML = '<div class="tier-grid">' + tiers.map(t => {
       const p = plans[t.key];
@@ -87,24 +100,23 @@
       let docs;
       if (t.key === 'basic' && !p.product && p.overview) {
         const mode = p.mode_overview === 'llm' ? 'LLM' : '内置引擎';
-        docs = [{ doc: 'overview', ic: '🚀', t: '方案速览（合并版）', s: '定位 · 价值判断 · 关键要点 · 技术快照（' + mode + '）', icCls: 'product' }];
+        docs = [{ doc: 'overview', t: '方案速览（合并版）', s: '定位 · 价值判断 · 关键要点 · 技术快照（' + mode + '）' }];
       } else {
         const modeP = p.mode_product === 'llm' ? 'LLM' : '内置引擎';
         const modeT = p.mode_tech === 'llm' ? 'LLM' : '内置引擎';
         docs = [
-          { doc: 'product', ic: '📱', t: '产品版方案', s: '需求定位 · 流程 · 功能 · 验收（' + modeP + '）', icCls: 'product' },
-          { doc: 'tech', ic: '⚙️', t: '技术版方案', s: '数据 · 自动化 · 集成 · 实施（' + modeT + '）', icCls: 'tech' }
+          { doc: 'product', t: '产品版方案', s: '需求定位 · 流程 · 功能 · 验收（' + modeP + '）' },
+          { doc: 'tech', t: '技术版方案', s: '数据 · 自动化 · 集成 · 实施（' + modeT + '）' }
         ];
       }
       return `<div class="tier">
         <div class="tier-head">
-          <div class="tier-name"><span>${t.ic}</span>${t.name} <span class="chip ${t.cls}">${t.key === 'basic' ? '速览' : t.key === 'intermediate' ? '评审' : '立项'}</span></div>
+          <div class="tier-name">${t.name} <span class="chip ${t.cls}">${t.key === 'basic' ? '速览' : t.key === 'intermediate' ? '评审' : '立项'}</span></div>
           <div class="tier-desc">${t.desc}</div>
         </div>
         <div class="tier-body">
           <div class="tier-doc-list">
             ${docs.map(dd => `<button class="doc-btn" data-tier="${t.key}" data-doc="${dd.doc}">
-              <div class="ic ${dd.icCls}">${dd.ic}</div>
               <div><div class="t">${dd.t}</div><div class="s">${dd.s}</div></div>
             </button>`).join('')}
           </div>
@@ -134,9 +146,9 @@
       <div class="flex-between mb12">
         <div style="font-size:13px;color:var(--ink-3)">${UI.esc(cur.title)} · ${UI.esc(docName)} · 生成于 ${UI.fmtTime(p.generatedAt)}</div>
         <div class="flex">
-          <button class="btn btn-primary btn-sm" id="dlWord">⬇ 下载 Word</button>
-          <button class="btn btn-sm" id="dlMd">.md</button>
-          <button class="btn btn-sm" id="closeDoc">✕</button>
+          <button class="btn btn-primary btn-sm" id="dlWord">下载 Word</button>
+          <button class="btn btn-sm" id="dlMd">Markdown</button>
+          <button class="btn btn-sm" id="closeDoc">关闭</button>
         </div>
       </div>
       <div id="docBody">${MD.render(md)}</div>
@@ -161,7 +173,7 @@
       } catch (err) {
         UI.toast(err.message, 'err');
       }
-      btn.disabled = false; btn.innerHTML = '⬇ 下载 Word';
+      btn.disabled = false; btn.innerHTML = '下载 Word';
     });
     mask.querySelector('#dlMd').addEventListener('click', () => {
       saveBlob(new Blob([md], { type: 'text/markdown;charset=utf-8' }), `${cur.title}_${tierLabel}_${doc === 'overview' ? '速览' : doc === 'product' ? '产品版' : '技术版'}.md`);
@@ -176,10 +188,10 @@
     const d = p.decision, s = p.sop;
     let html = `<div class="card card-pad"><div class="flex-between">
         <div class="card-title">需求画像（完整度 ${p.completeness || 0}%）</div>
-        <div class="flex">${UI.typeChip(p.type)}<button class="btn btn-sm" id="editProfile">✏️ 去 AI 澄清里补充</button></div>
+        <div class="flex">${UI.typeChip(p.type)}<button class="btn btn-sm" id="editProfile">去澄清里补充</button></div>
       </div>`;
     if (!p.type) {
-      html += '<div class="empty"><div class="big">🧭</div>尚未开始 AI 澄清，先去对话里聊聊吧</div></div>';
+      html += '<div class="empty">尚未开始澄清。</div></div>';
       box.innerHTML = html; bindEdit(); return;
     }
     if (p.type === 'decision') {
@@ -232,7 +244,7 @@
   function renderValue(box) {
     const v = cur.value;
     if (!v) {
-      box.innerHTML = '<div class="card card-pad empty"><div class="big">🎯</div>生成方案后会自动完成价值分析。去 <a class="link" href="#/priority">价值优先级看板</a> 查看全局排序。</div>';
+      box.innerHTML = '<div class="card card-pad empty">生成方案后会自动完成价值分析。去 <a class="link" href="#/priority">价值优先级看板</a> 查看全局排序。</div>';
       return;
     }
     const color = v.level === 'P0' ? '#dc2626' : v.level === 'P1' ? '#d97706' : '#64748b';
@@ -257,14 +269,14 @@
         <div class="score-bar mt8"><i style="width:${dm.score}%;background:${dc}"></i></div></div>`;
       }).join('')}` : ''}
       ${a.gaps && a.gaps.length ? `<div class="prof-group-title">待确认缺口</div>
-      ${a.gaps.map(g => `<div class="flow-chip" style="font-size:12px;padding:5px 10px">⚠ ${UI.esc(g)}</div>`).join('')}` : ''}
+      ${a.gaps.map(g => `<div class="flow-chip" style="font-size:12px;padding:5px 10px">${UI.esc(g)}</div>`).join('')}` : ''}
     </div>` : '';
 
     box.innerHTML = `<div class="grid grid-2">
       <div class="card card-pad">
         <div class="card-title">价值评分</div>
         <div class="flex mt12" style="gap:18px;align-items:center">
-          <div class="pri-score" style="background:${color}">${v.score}</div>
+          <div class="pri-score-text">${v.score}<span>分</span></div>
           <div>
             ${UI.levelChip(v.level)}
             ${v.effort !== undefined ? `<div class="text-sm muted mt8">预计投入约 <b>${v.effort}</b> 人天 · 自动化潜力 <b>${v.autoRate}%</b></div>` : ''}
@@ -306,10 +318,10 @@
         <div class="card-title">当前状态</div>
         <div class="prof-field"><div class="k">需求状态</div><div class="v">${UI.statusChip(cur.status)}（进度 ${UI.pct(cur.status)}%）</div></div>
         <div class="prof-field"><div class="k">AI 澄清对话</div><div class="v">${chatCount} 条消息 · 画像完整度 ${cur.profile.completeness || 0}%</div></div>
-        <div class="prof-field"><div class="k">方案文档</div><div class="v">${cur.plans && cur.plans.basic ? '初级/中级/高级 × 产品版/技术版 共 6 份 ✅' : '未生成'}</div></div>
+        <div class="prof-field"><div class="k">方案文档</div><div class="v">${cur.plans && cur.plans.basic ? '初级/中级/高级 × 产品版/技术版 共 6 份' : '未生成'}</div></div>
         <div class="prof-field"><div class="k">价值优先级</div><div class="v">${cur.value ? cur.value.level + ' · ' + cur.value.score + ' 分' : '待分析'}</div></div>
         <div class="prof-field"><div class="k">创建 / 更新</div><div class="v">${UI.fmtTime(cur.createdAt)} / ${UI.fmtTime(cur.updatedAt)}</div></div>
-        <div class="mt12"><button class="btn btn-primary btn-block" id="toChat">💬 继续 AI 澄清 / 重新生成</button></div>
+        <div class="mt12"><button class="btn btn-primary btn-block" id="toChat">继续澄清 / 重新生成</button></div>
       </div>
     </div>`;
     document.getElementById('toChat').addEventListener('click', () => { location.hash = '#/new/' + id; });

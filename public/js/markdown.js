@@ -1,7 +1,14 @@
 /* 轻量 Markdown 渲染器（安全：先转义 HTML，再解析） */
 (function (global) {
+  /* 展示层去掉表情符号。源码不写 emoji 字符，避免页面或调试器里再看到。 */
+  function stripEmoji(s) {
+    return String(s == null ? '' : s)
+      .replace(/\p{Extended_Pictographic}/gu, '')
+      .replace(/[\uFE00-\uFE0F\u200D\u20E3]/g, '')
+      .replace(/[\u2300-\u23FF\u2600-\u27BF\u2B00-\u2BFF]/g, '');
+  }
   function esc(s) {
-    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return stripEmoji(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
   function inline(s) {
     s = esc(s);
@@ -34,7 +41,7 @@
   }
   function render(md) {
     if (!md) return '';
-    const lines = String(md).split(/\r?\n/);
+    const lines = stripEmoji(md).split(/\r?\n/);
     let html = '';
     let i = 0;
     let listType = null, inCode = false, codeBuf = [], tableBuf = null;
@@ -79,5 +86,5 @@
     flushTable(); flushList();
     return html;
   }
-  global.MD = { render, inline, esc };
+  global.MD = { render, inline, esc, stripEmoji };
 })(window);
