@@ -45,6 +45,32 @@ body {
 .brand-name { display: block; font-weight: 700; font-size: 15px; color: var(--ink); }
 .brand-sub { display: block; font-size: 12px; color: var(--ink-3); margin-top: 2px; }
 .nav { display: flex; flex-direction: column; gap: 2px; }
+.nav-item[hidden] { display: none; }
+.role-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin: 0 0 14px;
+  padding: 4px;
+  background: #e8e2d6;
+  border-radius: 8px;
+}
+.role-switch button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink-3);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.role-switch button.active {
+  background: var(--card);
+  color: var(--ink);
+}
 .nav-item {
   display: flex; align-items: center; padding: 8px 10px; border-radius: 8px;
   color: var(--ink-3); text-decoration: none; font-size: 14px;

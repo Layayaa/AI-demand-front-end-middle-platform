@@ -13,14 +13,18 @@
       <span class="brand-mark" aria-hidden="true"></span>
       <span>
         <span class="brand-name">需求前置</span>
-        <span class="brand-sub">澄清后再出方案</span>
+        <span class="brand-sub" id="roleSub">提需业务</span>
       </span>
     </a>
+    <div class="role-switch" role="tablist" aria-label="使用身份">
+      <button type="button" data-role-set="submitter">提需</button>
+      <button type="button" data-role-set="reviewer">产品/业务</button>
+    </div>
     <nav class="nav" id="nav">
-      <a href="#/dashboard" data-nav="dashboard" class="nav-item">工作台</a>
-      <a href="#/new" data-nav="new" class="nav-item">提出需求</a>
-      <a href="#/priority" data-nav="priority" class="nav-item">优先级</a>
-      <a href="#/settings" data-nav="settings" class="nav-item">设置</a>
+      <a href="#/dashboard" data-nav="dashboard" data-for="submitter reviewer" class="nav-item">工作台</a>
+      <a href="#/new" data-nav="new" data-for="submitter" class="nav-item">提出需求</a>
+      <a href="#/priority" data-nav="priority" data-for="reviewer" class="nav-item">价值优先级</a>
+      <a href="#/settings" data-nav="settings" data-for="reviewer" class="nav-item">设置</a>
     </nav>
     <div class="sidebar-foot">
       <div class="ai-mode-badge" id="aiModeBadge">内置引擎</div>
@@ -33,6 +37,7 @@
 <script src="/js/markdown.js"></script>
 <script src="/js/api.js"></script>
 <script src="/js/ui.js"></script>
+<script src="/js/role.js"></script>
 <script src="/js/views/dashboard.js"></script>
 <script src="/js/views/intake.js"></script>
 <script src="/js/views/detail.js"></script>

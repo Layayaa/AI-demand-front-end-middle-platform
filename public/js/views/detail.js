@@ -7,8 +7,20 @@
     cur = await API.getRequirement(rid);
     if (!cur) { location.hash = '#/dashboard'; return; }
     if (['plans', 'profile', 'value', 'progress'].includes(tabHint)) tab = tabHint;
+    if (!Role.isReviewer() && tab === 'value') tab = 'plans';
     const main = document.getElementById('main');
     const v = cur.value;
+    const reviewer = Role.isReviewer();
+    const valueChip = reviewer && v
+      ? '<span class="chip ' + (v.level === 'P0' ? 'lvl-P0' : v.level === 'P1' ? 'lvl-P1' : 'lvl-P2') + '">' + v.level + ' · ' + v.score + ' 分</span>'
+      : '';
+    const valueTab = reviewer ? '<div class="tab" data-t="value">价值分析</div>' : '';
+    const confirmBtn = reviewer
+      ? '<button class="btn btn-success" id="confirmDone">确认完成</button>'
+      : '';
+    const chatBtn = reviewer
+      ? ''
+      : '<button class="btn btn-primary" id="goChat">继续澄清</button>';
     main.innerHTML = `
       <div class="detail-head card card-pad">
         <div class="info">
@@ -20,20 +32,19 @@
           <div class="flex mt12" style="gap:12px">
             ${UI.statusChip(cur.status)}
             <div class="flex" style="gap:6px"><div class="progress" style="width:160px"><i style="width:${UI.pct(cur.status)}%"></i></div><span class="text-xs muted">${UI.pct(cur.status)}%</span></div>
-            ${v ? '<span class="chip ' + (v.level === 'P0' ? 'lvl-P0' : v.level === 'P1' ? 'lvl-P1' : 'lvl-P2') + '">' + v.level + ' · ' + v.score + ' 分</span>' : ''}
+            ${valueChip}
           </div>
         </div>
         <div class="flex">
-          <button class="btn" id="goChat">💬 继续 AI 澄清</button>
-          <button class="btn btn-success" id="confirmDone">✓ 业务确认完成</button>
-          <button class="btn btn-sm btn-danger-soft" id="delReq" style="display:none">删除</button>
+          ${chatBtn}
+          ${confirmBtn}
         </div>
       </div>
       <div class="tabs">
-        <div class="tab" data-t="plans">📄 三档方案</div>
-        <div class="tab" data-t="profile">📋 需求画像</div>
-        <div class="tab" data-t="value">🎯 价值分析</div>
-        <div class="tab" data-t="progress">🕐 进度记录</div>
+        <div class="tab" data-t="plans">方案</div>
+        <div class="tab" data-t="profile">需求画像</div>
+        ${valueTab}
+        <div class="tab" data-t="progress">进度</div>
       </div>
       <div id="tabBody"></div>`;
 
@@ -44,8 +55,10 @@
         renderTab();
       });
     });
-    document.getElementById('goChat').addEventListener('click', () => { location.hash = '#/new/' + id; });
-    document.getElementById('confirmDone').addEventListener('click', confirmDone);
+    const chat = document.getElementById('goChat');
+    if (chat) chat.addEventListener('click', () => { location.hash = '#/new/' + id; });
+    const done = document.getElementById('confirmDone');
+    if (done) done.addEventListener('click', confirmDone);
     renderTab();
   }
 
