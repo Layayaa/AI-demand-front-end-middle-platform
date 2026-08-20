@@ -1,0 +1,15 @@
+{
+  "name": "req-pre-analysis",
+  "version": "1.0.0",
+  "description": "需求前置分析平台 — 业务提交需求，AI前置澄清，输出三档方案（初级/中级/高级 × 产品版/技术版），进度反馈与价值优先级分析",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "seed": "node -e \"require('./lib/seed.js').seedIfEmpty(); console.log('seeded')\""
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}

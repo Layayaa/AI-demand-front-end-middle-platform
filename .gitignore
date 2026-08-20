@@ -1,0 +1,20 @@
+.DS_Store
+
+# Local runtime state and caches
+.mysql-data/
+.mysql-run/
+.pnpm-local-store/
+.uv-cache/
+.uv-python/
+
+# Bundled local runtimes and downloaded tools
+tools/
+
+# Extracted source snapshots used only for local reference
+Requirements_Analysis_Automation-master-8dbe0f39275006deb7ab3e11f19875263cd78777/
+Requirements_Analysis_Automation-master-9bccd509d127ee0f29744368217a86f1a54221be/
+
+# Local secrets
+.env
+.env.*
+!.env.example
