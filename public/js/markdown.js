@@ -5,9 +5,7 @@
     return String(s == null ? '' : s)
       .replace(/\p{Extended_Pictographic}/gu, '')
       .replace(/[\uFE00-\uFE0F\u200D\u20E3]/g, '')
-      .replace(/[\u2300-\u23FF\u2600-\u27BF\u2B00-\u2BFF]/g, '')
-      .replace(/[ \t]{2,}/g, ' ')
-      .replace(/^[ \t]+|[ \t]+$/gm, '');
+      .replace(/[\u2300-\u23FF\u2600-\u27BF\u2B00-\u2BFF]/g, '');
   }
   function esc(s) {
     return stripEmoji(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
