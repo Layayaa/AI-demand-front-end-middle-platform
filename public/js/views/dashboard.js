@@ -2,10 +2,10 @@
 (function (global) {
   async function render() {
     const main = document.getElementById('main');
-    main.innerHTML = '<div class="page-head"><div><h1>工作台</h1><div class="sub">业务需求提交 · AI 前置澄清 · 三档方案 · 进度跟踪</div></div>' +
-      '<a href="#/new" class="btn btn-primary">＋ 新建需求</a></div>' +
-      '<div class="grid grid-4" id="stats"></div>' +
-      '<div class="card card-pad mt16"><div class="flex-between mb12"><div class="card-title">需求列表</div><div class="muted text-sm" id="listCount"></div></div><div id="reqList"></div></div>';
+    main.innerHTML = '<div class="page-head"><h1>项目</h1>' +
+      '<a href="#/new" class="btn btn-primary">提出需求</a></div>' +
+      '<div class="sum-line" id="stats"></div>' +
+      '<div class="card card-pad"><div class="flex-between mb12"><div class="card-title">需求列表</div><div class="muted text-sm" id="listCount"></div></div><div id="reqList"></div></div>';
 
     const [reqs, pri] = await Promise.all([API.listRequirements(), API.priority()]);
     renderStats(reqs, pri.items);
@@ -17,18 +17,15 @@
     const active = reqs.filter(r => !['done', 'review'].includes(r.status)).length;
     const review = reqs.filter(r => r.status === 'review').length;
     const p0 = items.filter(i => i.level === 'P0').length;
-    document.getElementById('stats').innerHTML = `
-      <div class="card stat"><div class="num blue">${total}</div><div class="label">需求总数</div></div>
-      <div class="card stat"><div class="num amber">${active}</div><div class="label">进行中（澄清/分析/方案）</div></div>
-      <div class="card stat"><div class="num violet">${review}</div><div class="label">待业务评审</div></div>
-      <div class="card stat"><div class="num green">${p0}</div><div class="label">P0 高价值需求</div></div>`;
+    document.getElementById('stats').textContent =
+      total + ' 条 · ' + active + ' 进行中 · ' + review + ' 待评审 · ' + p0 + ' 个 P0';
   }
 
   function renderList(reqs) {
     const box = document.getElementById('reqList');
     document.getElementById('listCount').textContent = '共 ' + reqs.length + ' 条';
     if (!reqs.length) {
-      box.innerHTML = '<div class="empty"><div class="big">📭</div>还没有需求，点击右上角「新建需求」开始 AI 前置澄清</div>';
+      box.innerHTML = '<div class="empty">还没有需求。<a class="link" href="#/new">提出一条</a></div>';
       return;
     }
     const rows = reqs.map(r => `

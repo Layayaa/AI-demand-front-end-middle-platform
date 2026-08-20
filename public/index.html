@@ -3,28 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>需求前置分析平台</title>
+<title>需求前置</title>
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand">
-      <div class="brand-logo">🧭</div>
-      <div>
-        <div class="brand-name">需求前置分析平台</div>
-        <div class="brand-sub">AI 前置澄清 · 三档方案 · 价值优先级</div>
-      </div>
-    </div>
+    <a class="brand" href="#/dashboard">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>
+        <span class="brand-name">需求前置</span>
+        <span class="brand-sub">澄清后再出方案</span>
+      </span>
+    </a>
     <nav class="nav" id="nav">
-      <a href="#/dashboard" data-nav="dashboard" class="nav-item"><span>📋</span>工作台</a>
-      <a href="#/new" data-nav="new" class="nav-item"><span>✨</span>新建需求 · AI澄清</a>
-      <a href="#/priority" data-nav="priority" class="nav-item"><span>🎯</span>价值优先级</a>
-      <a href="#/settings" data-nav="settings" class="nav-item"><span>⚙️</span>设置</a>
+      <a href="#/dashboard" data-nav="dashboard" class="nav-item">工作台</a>
+      <a href="#/new" data-nav="new" class="nav-item">提出需求</a>
+      <a href="#/priority" data-nav="priority" class="nav-item">优先级</a>
+      <a href="#/settings" data-nav="settings" class="nav-item">设置</a>
     </nav>
     <div class="sidebar-foot">
-      <div class="ai-mode-badge" id="aiModeBadge">🤖 内置AI引擎</div>
-      <div class="sidebar-tip">基于《单点决策拆解表》<br>《SOP流程拆解表》方法论</div>
+      <div class="ai-mode-badge" id="aiModeBadge">内置引擎</div>
     </div>
   </aside>
   <main class="main" id="main"></main>

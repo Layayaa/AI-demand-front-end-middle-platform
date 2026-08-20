@@ -11,6 +11,8 @@ node server.js
 
 浏览器打开 **http://localhost:3210** （可用环境变量改端口：`PORT=8080 node server.js`）
 
+这是当前能用的界面。`platform/frontend` 是迁移中的 Vue 壳，默认在 `5173`，和 3210 不是同一套页面。
+
 零依赖、无需安装任何 npm 包（Node ≥ 18）。
 
 ## 企业级迁移主线

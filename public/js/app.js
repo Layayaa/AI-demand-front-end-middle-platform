@@ -35,7 +35,7 @@
       const h = await API.health();
       const s = await API.getSettings();
       const badge = document.getElementById('aiModeBadge');
-      if (badge) badge.textContent = s.aiMode === 'llm' ? '🌐 大模型API模式' : '🤖 内置AI引擎';
+      if (badge) badge.textContent = s.aiMode === 'llm' ? '大模型 API' : '内置引擎';
     } catch (e) {
       document.getElementById('main').innerHTML = '<div class="card card-pad empty"><div class="big">📡</div>无法连接服务：' + UI.esc(e.message) + '<div class="mt12 muted text-sm">请确认已通过 <code>node server.js</code> 启动后端服务</div></div>';
       return;

@@ -7,26 +7,12 @@
   async function renderForm() {
     const main = document.getElementById('main');
     main.innerHTML = `
-      <div class="page-head"><div><h1>新建需求</h1><div class="sub">提交后，AI 会先帮你把需求聊清楚，再输出三档方案</div></div></div>
-      <div class="grid grid-2">
-        <div class="card card-pad">
-          <div class="card-title">提交需求</div>
-          <div class="card-sub">先简单描述，细节交给 AI 澄清环节</div>
-          <div class="form-row"><label>需求名称 *</label><input type="text" id="f-title" placeholder="例如：滞销SKU处置方式判断" maxlength="60"></div>
-          <div class="form-row"><label>一句话描述</label><textarea id="f-summary" placeholder="这个需求大概要解决什么问题？（可先留空）" maxlength="300"></textarea></div>
-          <div class="form-row"><label>所属部门</label><input type="text" id="f-dept" placeholder="例如：商品运营 / 客服部" maxlength="30"></div>
-          <button class="btn btn-primary btn-block" id="f-submit">提交需求，开始 AI 前置澄清 →</button>
-          <div class="hint mt8">💡 也可以直接描述场景：AI 会判断它是「单点决策」还是「SOP流程」，再逐步聊清楚数据、规则、判断标准与行动。</div>
-        </div>
-        <div class="card card-pad">
-          <div class="card-title">接下来会发生什么？</div>
-          <div class="prof-group-title">① AI 前置澄清</div>
-          <div class="prof-field"><div class="v">判断需求本质（单点决策 / SOP流程），按《表1》《表2》框架逐步提问，边聊边生成结构化需求画像</div></div>
-          <div class="prof-group-title">② 三档方案</div>
-          <div class="prof-field"><div class="v"><b>初级</b>（快速判断）→ <b>中级</b>（可评审方案）→ <b>高级</b>（完整立项），每档均含 <b>产品版 + 技术版</b>，共 6 份文档</div></div>
-          <div class="prof-group-title">③ 价值优先级 + 进度反馈</div>
-          <div class="prof-field"><div class="v">自动评估价值分（P0/P1/P2），全流程进度可追溯，评审确认一键完成</div></div>
-        </div>
+      <div class="page-head"><h1>提出需求</h1></div>
+      <div class="card card-pad" style="max-width:560px">
+        <div class="form-row"><label>标题</label><input type="text" id="f-title" placeholder="要解决什么问题" maxlength="60"></div>
+        <div class="form-row"><label>说明</label><textarea id="f-summary" placeholder="已知事实写这里，不清楚的留空" maxlength="300"></textarea></div>
+        <div class="form-row"><label>部门</label><input type="text" id="f-dept" placeholder="可选" maxlength="30"></div>
+        <button class="btn btn-primary" id="f-submit">开始澄清</button>
       </div>`;
     document.getElementById('f-submit').addEventListener('click', submit);
     ['f-title', 'f-summary', 'f-dept'].forEach(id => {
