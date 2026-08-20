@@ -14,11 +14,11 @@
         <div class="card-sub">推荐使用「大模型API」——对话最接近真实顾问，AI 自主追问并做交付前自检；未配置 Key 或调用失败时自动回退「内置引擎」保底。</div>
         <div class="mode-cards">
           <div class="mode-card" data-mode="llm">
-            <div class="name">🌐 大模型 API <span class="chip chip-type">推荐体验 · 顾问式对话</span></div>
+            <div class="name">大模型 API <span class="chip chip-type">推荐体验 · 顾问式对话</span></div>
             <div class="desc">接入 OpenAI 兼容接口（DeepSeek / OpenAI / 通义 / Kimi 等）：业务自由描述，AI 自主判断还缺什么、追问关键点、交付前自检缺口；文档由大模型生成更专业。失败自动回退内置引擎。</div>
           </div>
           <div class="mode-card" data-mode="builtin">
-            <div class="name">🤖 内置 AI 引擎 <span class="chip chip-submitted">保底 · 离线可用</span></div>
+            <div class="name">内置引擎 <span class="chip chip-submitted">保底 · 离线可用</span></div>
             <div class="desc">规则引擎兜底模式：结构化提问、自动提取画像、模板生成方案。无需 API Key、完全离线，作为未配置大模型或调用失败时的保障。</div>
           </div>
         </div>
@@ -30,7 +30,7 @@
           <div class="field-label">模型名称</div>
           <input type="text" id="llm-model" placeholder="deepseek-chat / gpt-4o / qwen-plus / moonshot-v1-8k" value="${UI.esc(settings.llm.model)}">
           <div class="flex mt12">
-            <button class="btn" id="testLlm">🔌 测试连接</button>
+            <button class="btn" id="testLlm">测试连接</button>
             <button class="btn btn-primary" id="saveLlm">保存配置</button>
             <span class="text-xs muted" id="llmTestResult"></span>
           </div>
@@ -65,7 +65,7 @@
           <div class="form-row"><label>注入上下文最大字符数</label><input type="text" id="kb-maxchars" value="${UI.esc(kb.maxChars || 6000)}"></div>
         </div>
         <div class="flex mt12">
-          <button class="btn" id="testKnowledge">🔎 检查知识库</button>
+          <button class="btn" id="testKnowledge">检查知识库</button>
           <button class="btn btn-primary" id="saveKnowledge">保存知识库配置</button>
           <span class="text-xs muted" id="kbTestResult"></span>
         </div>
@@ -84,11 +84,11 @@
         <div class="card-title">平台说明</div>
         <div class="card-sub">需求前置分析方法论</div>
         <div class="text-sm" style="color:var(--ink-2);line-height:2">
-          🧭 <b>前置澄清</b>：AI 先判断需求是「单点决策」还是「SOP流程」，按《表1-单点决策拆解表》《表2-SOP流程拆解表》框架逐步提问，把模糊需求聊成结构化画像。<br>
-          📄 <b>三档方案</b>：初级（快速判断）→ 中级（可评审）→ 高级（完整立项），每档输出 <b>产品版 + 技术版</b> 两份文档，共 6 份。<br>
-          📚 <b>知识库挂载</b>：可挂载本地目录、RAGFlow 或通用检索服务，作为 AI 的可选背景上下文。<br>
-          🎯 <b>价值优先级</b>：按 价值/频率/耗时/影响/自动化潜力/人数 六维打分，输出 P0/P1/P2 排序与建议。<br>
-          🕐 <b>进度反馈</b>：提交 → 澄清 → 画像 → 方案 → 评审 → 完成，全程留痕可追溯。
+          <b>前置澄清</b>：AI 先判断需求是「单点决策」还是「SOP流程」，按《表1-单点决策拆解表》《表2-SOP流程拆解表》框架逐步提问，把模糊需求聊成结构化画像。<br>
+          <b>三档方案</b>：初级（快速判断）→ 中级（可评审）→ 高级（完整立项），每档输出 <b>产品版 + 技术版</b> 两份文档，共 6 份。<br>
+          <b>知识库挂载</b>：可挂载本地目录、RAGFlow 或通用检索服务，作为 AI 的可选背景上下文。<br>
+          <b>价值优先级</b>：按 价值/频率/耗时/影响/自动化潜力/人数 六维打分，输出 P0/P1/P2 排序与建议。<br>
+          <b>进度反馈</b>：提交 → 澄清 → 画像 → 方案 → 评审 → 完成，全程留痕可追溯。
         </div>
       </div>`;
 
@@ -140,7 +140,7 @@
       model: document.getElementById('llm-model').value.trim()
     };
     const r = await API.testLLM(llm);
-    out.textContent = r.ok ? ('✅ ' + r.reply) : ('❌ ' + r.error);
+    out.textContent = r.ok ? r.reply : r.error;
     btn.disabled = false;
   }
 
@@ -178,9 +178,9 @@
     out.textContent = '检查中…';
     try {
       const r = await API.testKnowledge(readKnowledgeForm());
-      out.textContent = r.ok ? `✅ 可用，命中 ${r.resultCount || 0} 个片段` : ('❌ ' + (r.error || '不可用'));
+      out.textContent = r.ok ? `可用，命中 ${r.resultCount || 0} 个片段` : (r.error || '不可用');
     } catch (e) {
-      out.textContent = '❌ ' + e.message;
+      out.textContent = e.message;
     } finally {
       btn.disabled = false;
     }
@@ -188,7 +188,7 @@
 
   function updateBadge() {
     const badge = document.getElementById('aiModeBadge');
-    if (badge) badge.textContent = settings.aiMode === 'llm' ? '🌐 大模型API模式' : '🤖 内置AI引擎';
+    if (badge) badge.textContent = settings.aiMode === 'llm' ? '大模型 API' : '内置引擎';
   }
 
   global.Views = global.Views || {};

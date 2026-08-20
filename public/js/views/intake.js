@@ -27,11 +27,11 @@
     btn.disabled = true; btn.innerHTML = '<span class="spin"></span> 创建中…';
     try {
       const r = await API.createRequirement({ title, summary: document.getElementById('f-summary').value.trim(), department: document.getElementById('f-dept').value.trim() });
-      UI.toast('需求已创建，AI 澄清开始 🎉', 'ok');
+      UI.toast('需求已创建，开始澄清', 'ok');
       location.hash = '#/new/' + r.id;
     } catch (e) {
       UI.toast(e.message, 'err');
-      btn.disabled = false; btn.innerHTML = '提交需求，开始 AI 前置澄清 →';
+      btn.disabled = false; btn.innerHTML = '开始澄清';
     }
   }
 
@@ -49,13 +49,13 @@
         </div>
         <div class="flex">
           <button class="btn" id="skipBtn">跳过澄清，直接生成方案</button>
-          <button class="btn btn-primary" id="genBtn" disabled><span>⚡</span> 生成三档方案</button>
+          <button class="btn btn-primary" id="genBtn" disabled>生成三档方案</button>
         </div>
       </div>
       <div class="chat-layout">
         <div class="chat-box">
           <div class="chat-head">
-            <div class="avatar">🤖</div>
+            <div class="avatar">AI</div>
             <div><div class="who">AI 需求顾问</div><div class="state" id="aiState">正在与业务对话，梳理需求画像</div></div>
           </div>
           <div class="chat-msgs" id="chatMsgs"></div>
@@ -66,11 +66,11 @@
         </div>
         <div>
           <div class="panel">
-            <h3>🧭 澄清进度</h3>
+            <h3>澄清进度</h3>
             <div class="stepper" id="stepper"></div>
           </div>
           <div class="panel">
-            <h3>📋 需求画像</h3>
+            <h3>需求画像</h3>
             <div class="ring-wrap">
               <div class="ring" id="ring"><b>0%</b></div>
               <div class="ring-note" id="ringNote">AI 边聊边提取，<br>信息越全方案越准</div>
@@ -101,7 +101,7 @@
       const isAi = m.role === 'ai' || m.role === 'assistant';
       const cls = isAi ? 'ai' : m.role === 'user' ? 'user' : m.role;
       return `<div class="msg ${cls}">
-        ${isAi ? '<div class="avatar" style="width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">🤖</div>' : ''}
+        ${isAi ? '<div class="avatar">AI</div>' : ''}
         <div>
           <div class="bubble">${isAi ? MD.render(m.content) : UI.esc(m.content)}</div>
           ${isAi && i === msgs.length - 1 ? '<div class="chips" id="chipsRow"></div>' : ''}
@@ -144,7 +144,7 @@
     box.insertAdjacentHTML('beforeend', `<div class="msg user"><div><div class="bubble">${UI.esc(text)}</div><div class="time">刚刚</div></div></div>`);
     const typing = document.createElement('div');
     typing.className = 'msg ai';
-    typing.innerHTML = '<div class="avatar" style="width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">🤖</div><div><div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div></div>';
+    typing.innerHTML = '<div class="avatar">AI</div><div><div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div></div>';
     box.appendChild(typing);
     box.scrollTop = box.scrollHeight;
     const btn = document.getElementById('sendBtn');
@@ -184,7 +184,7 @@
       const stageIdx = res ? res.stageIndex : (p.stage === 'done' ? 4 : p.stage === 'confirm' ? 3 : p.type === 'sop' ? 2 : p.type === 'decision' ? 1 : 0);
       st.innerHTML = STEPS.map((s, i) => {
         const cls = i < stageIdx ? 'done' : i === stageIdx ? 'cur' : '';
-        const mark = i < stageIdx ? '✓' : i === stageIdx ? (i + 1) : '';
+        const mark = i < stageIdx ? '' : i === stageIdx ? (i + 1) : '';
         return `<div class="step ${cls}"><span class="dot">${mark}</span>${s}</div>`;
       }).join('');
     }
@@ -247,12 +247,12 @@
     try {
       await API.generatePlans(reqId, ['basic', 'intermediate', 'advanced']);
       cur = await API.getRequirement(reqId);
-      UI.toast('三档方案已生成 ✅ 三档各含产品版 + 技术版，共 6 份', 'ok');
+      UI.toast('三档方案已生成，共 6 份', 'ok');
       location.hash = '#/req/' + reqId;
     } catch (e) {
       UI.toast(e.message, 'err');
       btn.disabled = false;
-      btn.innerHTML = '<span>⚡</span> 生成三档方案';
+      btn.innerHTML = '生成三档方案';
     }
   }
 

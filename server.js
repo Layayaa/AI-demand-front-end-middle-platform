@@ -119,12 +119,12 @@ async function chatEndpoint(req, body) {
   }
   if (!aiText) {
     if (turn.done) {
-      aiText = '✅ 需求画像已确认！完整度 **' + (profile.completeness || 0) + '%**。\n\n点击右侧「**生成三档方案**」，我会输出初级、中级、高级三档，每档各含产品版与技术版，共 6 份文档。';
+      aiText = '需求画像已确认。完整度 **' + (profile.completeness || 0) + '%**。\n\n点击右侧「**生成三档方案**」，我会输出初级、中级、高级三档，每档各含产品版与技术版，共 6 份文档。';
     } else if (turn.confirmReady || profile.stage === 'confirm') {
       aiText = interview.buildSummary(profile);
     } else if (turn.typeUnclear || (profile.stage === 'type' && !profile.type)) {
       const q = interview.buildNextQuestion(profile);
-      aiText = '我还没太明白这个需求属于哪种形态 🤔\n\n' + q.text;
+      aiText = '我还没太明白这个需求属于哪种形态。\n\n' + q.text;
     } else {
       const q = interview.buildNextQuestion(profile);
       let prefix = '';
@@ -354,7 +354,7 @@ route('POST', '/api/requirements', async (req, body) => {
   // 首条 AI 欢迎语（顾问式：让业务直接描述，AI 自己判断）
   r.chat.push({
     role: 'assistant',
-    content: `你好 👋 我是你的 **AI 需求顾问**，收到需求「**${title}**」${r.department ? `（${r.department}）` : ''}。\n\n在出方案之前，我想先帮你把这个需求**聊清楚**，这样出来的方案才真正可落地。\n\n你可以直接告诉我：\n\n1. **想解决什么问题**（业务场景、现状痛点）\n2. **现在是怎么做的**（靠人判断？还是多步流程？大概多久一次？）\n3. **希望达成什么效果**\n\n不用讲究格式，想到什么说什么，我来帮你梳理成清晰的方案。`,
+    content: `你好，我是你的 **AI 需求顾问**，收到需求「**${title}**」${r.department ? `（${r.department}）` : ''}。\n\n在出方案之前，我想先帮你把这个需求**聊清楚**，这样出来的方案才真正可落地。\n\n你可以直接告诉我：\n\n1. **想解决什么问题**（业务场景、现状痛点）\n2. **现在是怎么做的**（靠人判断？还是多步流程？大概多久一次？）\n3. **希望达成什么效果**\n\n不用讲究格式，想到什么说什么，我来帮你梳理成清晰的方案。`,
     at: new Date().toISOString()
   });
   d.requirements.unshift(r);
@@ -476,7 +476,7 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   seedIfEmpty();
   console.log('──────────────────────────────────────────────');
-  console.log('  需求前置分析平台已启动 ✅');
+  console.log('  需求前置分析平台已启动');
   console.log(`  访问地址: http://localhost:${PORT}`);
   console.log('  (Ctrl+C 停止)');
   console.log('──────────────────────────────────────────────');
