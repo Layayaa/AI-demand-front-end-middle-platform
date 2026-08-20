@@ -11,11 +11,6 @@ const { healthOk, dbOk, llmConfigured } = usePlatformStatus()
     <a class="skip" href="#main">跳到内容</a>
     <aside class="rail">
       <RouterLink class="brand" to="/">
-        <span class="brand-mark" aria-hidden="true">
-          <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
-            <path d="M9 2c2.2 2.8 2.9 5 2.9 7.3 0 2.5-1.3 4.6-2.9 7-1.6-2.4-2.9-4.5-2.9-7C6.1 7 6.8 4.8 9 2z" fill="currentColor"/>
-          </svg>
-        </span>
         需求前置
       </RouterLink>
       <nav class="nav" aria-label="主导航">

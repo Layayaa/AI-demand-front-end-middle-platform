@@ -55,7 +55,6 @@
       <div class="chat-layout">
         <div class="chat-box">
           <div class="chat-head">
-            <div class="avatar">AI</div>
             <div><div class="who">AI 需求顾问</div><div class="state" id="aiState">正在与业务对话，梳理需求画像</div></div>
           </div>
           <div class="chat-msgs" id="chatMsgs"></div>
@@ -101,7 +100,6 @@
       const isAi = m.role === 'ai' || m.role === 'assistant';
       const cls = isAi ? 'ai' : m.role === 'user' ? 'user' : m.role;
       return `<div class="msg ${cls}">
-        ${isAi ? '<div class="avatar">AI</div>' : ''}
         <div>
           <div class="bubble">${isAi ? MD.render(m.content) : UI.esc(m.content)}</div>
           ${isAi && i === msgs.length - 1 ? '<div class="chips" id="chipsRow"></div>' : ''}
@@ -144,7 +142,7 @@
     box.insertAdjacentHTML('beforeend', `<div class="msg user"><div><div class="bubble">${UI.esc(text)}</div><div class="time">刚刚</div></div></div>`);
     const typing = document.createElement('div');
     typing.className = 'msg ai';
-    typing.innerHTML = '<div class="avatar">AI</div><div><div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div></div>';
+    typing.innerHTML = '<div><div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div></div>';
     box.appendChild(typing);
     box.scrollTop = box.scrollHeight;
     const btn = document.getElementById('sendBtn');

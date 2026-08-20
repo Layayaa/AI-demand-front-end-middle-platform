@@ -31,7 +31,7 @@
     const color = (l) => l === 'P0' ? '#dc2626' : l === 'P1' ? '#d97706' : '#64748b';
     box.innerHTML = items.map((i, idx) => `
       <div class="card pri-card mb12" style="cursor:pointer" data-id="${i.id}">
-        <div class="pri-score" style="background:${color(i.level)}">${i.score}</div>
+        <div class="pri-score-text">${i.score}<span>分</span></div>
         <div class="pri-main">
           <div class="flex-between">
             <div>

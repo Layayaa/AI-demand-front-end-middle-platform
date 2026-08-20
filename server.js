@@ -30,6 +30,7 @@ const llm = require('./lib/engine/llm');
 const hybrid = require('./lib/engine/hybrid');
 const knowledge = require('./lib/knowledge');
 const { seedIfEmpty } = require('./lib/seed');
+const { stripDeep, stripEmoji } = require('./lib/strip-emoji');
 
 const PORT = process.env.PORT || 3210;
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -46,7 +47,7 @@ const MIME = {
 };
 
 function sendJson(res, code, obj) {
-  const body = JSON.stringify(obj);
+  const body = JSON.stringify(stripDeep(obj));
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(body);
 }
@@ -241,7 +242,8 @@ function serveStatic(req, res, pathname) {
       return;
     }
     const ext = path.extname(full).toLowerCase();
-    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
+    const cache = ext === '.html' ? 'no-store' : 'no-cache';
+    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': cache });
     res.end(data);
   });
 }
@@ -413,7 +415,7 @@ route('GET', '/api/requirements/([^/]+)/documents/([^/]+)/(overview|product|tech
   const docx = require('./lib/docx');
   const tierLabel = { basic: '初级方案', intermediate: '中级方案', advanced: '高级方案' }[tier] || tier;
   const docLabel = doc === 'product' ? '产品版' : doc === 'tech' ? '技术版' : '速览';
-  const md = r.plans[tier][doc];
+  const md = stripEmoji(r.plans[tier][doc]);
   const meta = `需求前置分析平台 · 自动生成 · ${r.title} · 生成于 ${new Date(r.plans[tier].generatedAt || Date.now()).toLocaleString('zh-CN')}`;
   const buf = docx.mdToDocx(md, `${tierLabel}${doc === 'product' || doc === 'tech' ? ' · ' + docLabel : ' · 速览'}：${r.title}`, meta);
   const fname = encodeURIComponent(`${r.title}_${tierLabel}_${docLabel}.docx`);

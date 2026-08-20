@@ -1,16 +1,11 @@
 /* 轻量 Markdown 渲染器（安全：先转义 HTML，再解析） */
 (function (global) {
-  /* 展示层去掉表情符号（含 Emoji、符号变体、部分装饰性符号），保留中文与流程箭头 */
+  /* 展示层去掉表情符号。源码不写 emoji 字符，避免页面或调试器里再看到。 */
   function stripEmoji(s) {
     return String(s == null ? '' : s)
-      .replace(/[\uFE00-\uFE0F]/g, '')
-      .replace(/\u200D/g, '')
-      .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
-      .replace(/[\u{2300}-\u{23FF}]/gu, '')
-      .replace(/[\u{2600}-\u{27BF}]/gu, '')
-      .replace(/[\u{2B00}-\u{2BFF}]/gu, '')
-      .replace(/[\u20E3]/g, '')
-      .replace(/[✓✔✕✖★☆▶►]/g, '')
+      .replace(/\p{Extended_Pictographic}/gu, '')
+      .replace(/[\uFE00-\uFE0F\u200D\u20E3]/g, '')
+      .replace(/[\u2300-\u23FF\u2600-\u27BF\u2B00-\u2BFF]/g, '')
       .replace(/[ \t]{2,}/g, ' ')
       .replace(/^[ \t]+|[ \t]+$/gm, '');
   }

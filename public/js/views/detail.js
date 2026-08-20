@@ -90,9 +90,9 @@
       return;
     }
     const tiers = [
-      { key: 'basic', name: '初级方案', desc: '快速判断 · 产品版 + 技术版', cls: 'chip-tier-basic', ic: '初' },
-      { key: 'intermediate', name: '中级方案', desc: '可评审方案 · 产品版 + 技术版', cls: 'chip-tier-intermediate', ic: '中' },
-      { key: 'advanced', name: '高级方案', desc: '完整立项 · 产品版(PRD) + 技术版', cls: 'chip-tier-advanced', ic: '高' }
+      { key: 'basic', name: '初级方案', desc: '快速判断 · 产品版 + 技术版', cls: 'chip-tier-basic' },
+      { key: 'intermediate', name: '中级方案', desc: '可评审方案 · 产品版 + 技术版', cls: 'chip-tier-intermediate' },
+      { key: 'advanced', name: '高级方案', desc: '完整立项 · 产品版(PRD) + 技术版', cls: 'chip-tier-advanced' }
     ];
     box.innerHTML = '<div class="tier-grid">' + tiers.map(t => {
       const p = plans[t.key];
@@ -100,13 +100,13 @@
       let docs;
       if (t.key === 'basic' && !p.product && p.overview) {
         const mode = p.mode_overview === 'llm' ? 'LLM' : '内置引擎';
-        docs = [{ doc: 'overview', ic: '览', t: '方案速览（合并版）', s: '定位 · 价值判断 · 关键要点 · 技术快照（' + mode + '）', icCls: 'product' }];
+        docs = [{ doc: 'overview', t: '方案速览（合并版）', s: '定位 · 价值判断 · 关键要点 · 技术快照（' + mode + '）' }];
       } else {
         const modeP = p.mode_product === 'llm' ? 'LLM' : '内置引擎';
         const modeT = p.mode_tech === 'llm' ? 'LLM' : '内置引擎';
         docs = [
-          { doc: 'product', ic: '产', t: '产品版方案', s: '需求定位 · 流程 · 功能 · 验收（' + modeP + '）', icCls: 'product' },
-          { doc: 'tech', ic: '技', t: '技术版方案', s: '数据 · 自动化 · 集成 · 实施（' + modeT + '）', icCls: 'tech' }
+          { doc: 'product', t: '产品版方案', s: '需求定位 · 流程 · 功能 · 验收（' + modeP + '）' },
+          { doc: 'tech', t: '技术版方案', s: '数据 · 自动化 · 集成 · 实施（' + modeT + '）' }
         ];
       }
       return `<div class="tier">
@@ -117,7 +117,6 @@
         <div class="tier-body">
           <div class="tier-doc-list">
             ${docs.map(dd => `<button class="doc-btn" data-tier="${t.key}" data-doc="${dd.doc}">
-              <div class="ic ${dd.icCls}">${dd.ic}</div>
               <div><div class="t">${dd.t}</div><div class="s">${dd.s}</div></div>
             </button>`).join('')}
           </div>
@@ -277,7 +276,7 @@
       <div class="card card-pad">
         <div class="card-title">价值评分</div>
         <div class="flex mt12" style="gap:18px;align-items:center">
-          <div class="pri-score" style="background:${color}">${v.score}</div>
+          <div class="pri-score-text">${v.score}<span>分</span></div>
           <div>
             ${UI.levelChip(v.level)}
             ${v.effort !== undefined ? `<div class="text-sm muted mt8">预计投入约 <b>${v.effort}</b> 人天 · 自动化潜力 <b>${v.autoRate}%</b></div>` : ''}
