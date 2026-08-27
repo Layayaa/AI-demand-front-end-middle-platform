@@ -15,6 +15,22 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
   PRIMARY KEY (version)
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS users (
+  id CHAR(36) NOT NULL,
+  display_name VARCHAR(120) NOT NULL,
+  username VARCHAR(64) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  role VARCHAR(24) NOT NULL,
+  status VARCHAR(24) NOT NULL DEFAULT 'active',
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+    ON UPDATE CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_users_username (username),
+  KEY idx_users_role_status (role, status),
+  CONSTRAINT chk_users_role CHECK (role IN ('requester', 'reviewer'))
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS projects (
   id CHAR(36) NOT NULL,
   title VARCHAR(180) NOT NULL,
@@ -37,6 +53,20 @@ CREATE TABLE IF NOT EXISTS projects (
   KEY idx_projects_status_updated (status, updated_at),
   KEY idx_projects_priority_score (priority, value_score),
   CONSTRAINT chk_projects_score CHECK (value_score IS NULL OR value_score <= 100)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS project_owners (
+  project_id CHAR(36) NOT NULL,
+  user_id CHAR(36) NOT NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (project_id),
+  KEY idx_project_owners_user (user_id, created_at),
+  CONSTRAINT fk_project_owners_project
+    FOREIGN KEY (project_id) REFERENCES projects (id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_project_owners_user
+    FOREIGN KEY (user_id) REFERENCES users (id)
+    ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS source_files (
@@ -196,6 +226,40 @@ CREATE TABLE IF NOT EXISTS knowledge_connectors (
   KEY idx_knowledge_provider_enabled (provider, enabled)
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS runtime_settings (
+  setting_key VARCHAR(64) NOT NULL,
+  llm_provider VARCHAR(120) NOT NULL,
+  llm_base_url VARCHAR(500) NOT NULL,
+  llm_model VARCHAR(180) NOT NULL,
+  llm_quality_model VARCHAR(180) NOT NULL,
+  llm_api_key TEXT NULL,
+  llm_timeout_seconds DOUBLE NOT NULL,
+  llm_document_timeout_seconds DOUBLE NOT NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+    ON UPDATE CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (setting_key)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS llm_profiles (
+  profile_id VARCHAR(64) NOT NULL,
+  profile_name VARCHAR(120) NOT NULL,
+  llm_provider VARCHAR(120) NOT NULL,
+  llm_base_url VARCHAR(500) NOT NULL,
+  llm_model VARCHAR(180) NOT NULL,
+  llm_quality_model VARCHAR(180) NOT NULL,
+  llm_api_key TEXT NULL,
+  llm_timeout_seconds DOUBLE NOT NULL,
+  llm_document_timeout_seconds DOUBLE NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+    ON UPDATE CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (profile_id),
+  INDEX idx_llm_profiles_active (is_active),
+  UNIQUE KEY uq_llm_profiles_name (profile_name)
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS audit_logs (
   id CHAR(36) NOT NULL,
   actor VARCHAR(120) NULL,
@@ -210,7 +274,24 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   KEY idx_audit_created (created_at)
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS review_feedback (
+  id CHAR(36) NOT NULL,
+  project_id CHAR(36) NOT NULL,
+  reviewer_user_id CHAR(36) NOT NULL,
+  action VARCHAR(32) NOT NULL,
+  note TEXT NOT NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (id),
+  KEY idx_review_feedback_project_created (project_id, created_at),
+  CONSTRAINT fk_review_feedback_project
+    FOREIGN KEY (project_id) REFERENCES projects (id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_review_feedback_reviewer
+    FOREIGN KEY (reviewer_user_id) REFERENCES users (id)
+    ON DELETE RESTRICT,
+  CONSTRAINT chk_review_feedback_action CHECK (action IN ('request_info', 'approve'))
+) ENGINE=InnoDB;
+
 INSERT INTO schema_migrations (version, description)
 VALUES ('001', 'initial AI requirement hub schema')
 ON DUPLICATE KEY UPDATE description = VALUES(description);
-

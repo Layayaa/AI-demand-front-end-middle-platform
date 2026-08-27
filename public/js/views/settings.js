@@ -1,6 +1,19 @@
 /* 设置：AI 引擎 / 大模型 / 数据管理 */
 (function (global) {
   let settings = null;
+  const LLM_PRESETS = [
+    { id: 'deepseek', label: 'DeepSeek', baseUrl: 'https://api.deepseek.com', model: 'deepseek-v4-flash' },
+    { id: 'openai', label: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'gpt-5-mini' },
+    { id: 'aicodemirror', label: 'AICodeMirror / 中转站', baseUrl: 'https://api.aicodemirror.ai/api/codex/backend-api/codex/v1', model: 'gpt-5.5' },
+    { id: 'qwen', label: '通义千问', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
+    { id: 'moonshot', label: 'Kimi / Moonshot', baseUrl: 'https://api.moonshot.cn/v1', model: 'kimi-k2' },
+    { id: 'zhipu', label: '智谱 GLM', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4.5-air' },
+    { id: 'minimax', label: 'MiniMax', baseUrl: 'https://api.minimax.chat/v1', model: 'MiniMax-M1' },
+    { id: 'volcengine', label: '火山方舟 / 豆包', baseUrl: 'https://ark.cn-beijing.volces.com/api/v3', model: 'doubao-seed-1-6-flash-250615' },
+    { id: 'gemini', label: 'Google Gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-2.5-flash' },
+    { id: 'siliconflow', label: 'SiliconFlow', baseUrl: 'https://api.siliconflow.cn/v1', model: 'deepseek-ai/DeepSeek-V3' },
+    { id: 'openrouter', label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', model: 'deepseek/deepseek-chat' }
+  ];
 
   async function render() {
     settings = await API.getSettings();
@@ -23,12 +36,17 @@
           </div>
         </div>
         <div id="llmForm" style="display:none" class="mt16">
+          <div class="field-label">常用模型厂商</div>
+          <select id="llm-preset">
+            <option value="custom">自定义兼容接口</option>
+            ${LLM_PRESETS.map(preset => `<option value="${preset.id}">${preset.label}</option>`).join('')}
+          </select>
           <div class="field-label">接口地址 (Base URL)</div>
           <input type="text" id="llm-base" placeholder="https://api.deepseek.com" value="${UI.esc(settings.llm.baseUrl)}">
           <div class="field-label">API Key</div>
           <input type="password" id="llm-key" placeholder="sk-..." value="${UI.esc(settings.llm.apiKey)}">
           <div class="field-label">模型名称</div>
-          <input type="text" id="llm-model" placeholder="deepseek-chat / gpt-4o / qwen-plus / moonshot-v1-8k" value="${UI.esc(settings.llm.model)}">
+          <input type="text" id="llm-model" placeholder="deepseek-v4-flash / deepseek-v4-pro / gpt-4o / moonshot-v1-8k" value="${UI.esc(settings.llm.model)}">
           <div class="flex mt12">
             <button class="btn" id="testLlm">🔌 测试连接</button>
             <button class="btn btn-primary" id="saveLlm">保存配置</button>
@@ -97,6 +115,7 @@
     });
     document.getElementById('testLlm').addEventListener('click', testLlm);
     document.getElementById('saveLlm').addEventListener('click', saveLlm);
+    document.getElementById('llm-preset').addEventListener('change', applyPreset);
     document.getElementById('kb-provider').addEventListener('change', updateKnowledgeVisibility);
     document.getElementById('testKnowledge').addEventListener('click', testKnowledge);
     document.getElementById('saveKnowledge').addEventListener('click', saveKnowledge);
@@ -109,6 +128,7 @@
       await API.resetData(); UI.toast('数据已清空', 'ok'); location.hash = '#/dashboard';
     });
     selectMode(settings.aiMode);
+    syncPreset();
     updateKnowledgeVisibility();
     updateBadge();
   }
@@ -116,6 +136,20 @@
   function selectMode(mode) {
     document.querySelectorAll('.mode-card').forEach(c => c.classList.toggle('active', c.getAttribute('data-mode') === mode));
     document.getElementById('llmForm').style.display = mode === 'llm' ? 'block' : 'none';
+  }
+
+  function applyPreset() {
+    const preset = LLM_PRESETS.find(item => item.id === document.getElementById('llm-preset').value);
+    if (!preset) return;
+    document.getElementById('llm-base').value = preset.baseUrl;
+    document.getElementById('llm-model').value = preset.model;
+  }
+
+  function syncPreset() {
+    const current = LLM_PRESETS.find(item =>
+      item.baseUrl === settings.llm.baseUrl && item.model === settings.llm.model
+    );
+    document.getElementById('llm-preset').value = current ? current.id : 'custom';
   }
 
   async function saveLlm() {

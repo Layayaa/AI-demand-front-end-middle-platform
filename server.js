@@ -262,7 +262,7 @@ route('PUT', '/api/settings', async (req, body) => {
     d.settings.llm = {
       baseUrl: String(body.llm.baseUrl || d.settings.llm.baseUrl || 'https://api.deepseek.com'),
       apiKey: String(body.llm.apiKey !== undefined ? body.llm.apiKey : (d.settings.llm.apiKey || '')),
-      model: String(body.llm.model || d.settings.llm.model || 'deepseek-chat')
+      model: String(body.llm.model || d.settings.llm.model || 'deepseek-v4-flash')
     };
   }
   if (body.knowledge) {

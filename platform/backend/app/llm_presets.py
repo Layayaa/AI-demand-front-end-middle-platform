@@ -1,0 +1,108 @@
+from copy import deepcopy
+
+
+LLM_PRESETS = (
+    {
+        "id": "deepseek",
+        "label": "DeepSeek",
+        "description": "DeepSeek 官方 OpenAI 兼容接口",
+        "baseUrl": "https://api.deepseek.com",
+        "model": "deepseek-v4-flash",
+        "qualityModel": "deepseek-v4-pro",
+        "docsUrl": "https://api-docs.deepseek.com/",
+    },
+    {
+        "id": "openai",
+        "label": "OpenAI",
+        "description": "OpenAI 官方 API",
+        "baseUrl": "https://api.openai.com/v1",
+        "model": "gpt-5-mini",
+        "qualityModel": "gpt-5",
+        "docsUrl": "https://platform.openai.com/docs/api-reference",
+    },
+    {
+        "id": "aicodemirror",
+        "label": "AICodeMirror / 中转站",
+        "description": "AICodeMirror 提供的 OpenAI 兼容中转站",
+        "baseUrl": "https://api.aicodemirror.ai/api/codex/backend-api/codex/v1",
+        "model": "gpt-5.5",
+        "qualityModel": "gpt-5.5",
+        "docsUrl": "https://www.aicodemirror.ai/dashboard/apikeys",
+    },
+    {
+        "id": "qwen",
+        "label": "通义千问",
+        "description": "阿里云百炼 OpenAI 兼容接口",
+        "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "model": "qwen-plus",
+        "qualityModel": "qwen-max",
+        "docsUrl": "https://help.aliyun.com/zh/model-studio/developer-reference/compatibility-of-openai-with-dashscope",
+    },
+    {
+        "id": "moonshot",
+        "label": "Kimi / Moonshot",
+        "description": "月之暗面 OpenAI 兼容接口",
+        "baseUrl": "https://api.moonshot.cn/v1",
+        "model": "kimi-k2",
+        "qualityModel": "kimi-k2-thinking",
+        "docsUrl": "https://platform.moonshot.cn/docs/intro",
+    },
+    {
+        "id": "zhipu",
+        "label": "智谱 GLM",
+        "description": "智谱 AI 开放平台",
+        "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
+        "model": "glm-4.5-air",
+        "qualityModel": "glm-4.5",
+        "docsUrl": "https://open.bigmodel.cn/dev/api",
+    },
+    {
+        "id": "minimax",
+        "label": "MiniMax",
+        "description": "MiniMax OpenAI 兼容接口",
+        "baseUrl": "https://api.minimax.chat/v1",
+        "model": "MiniMax-M1",
+        "qualityModel": "MiniMax-Text-01",
+        "docsUrl": "https://platform.minimaxi.com/document",
+    },
+    {
+        "id": "volcengine",
+        "label": "火山方舟 / 豆包",
+        "description": "火山引擎方舟 OpenAI 兼容接口",
+        "baseUrl": "https://ark.cn-beijing.volces.com/api/v3",
+        "model": "doubao-seed-1-6-flash-250615",
+        "qualityModel": "doubao-seed-1-6-thinking-250615",
+        "docsUrl": "https://www.volcengine.com/docs/ark",
+    },
+    {
+        "id": "gemini",
+        "label": "Google Gemini",
+        "description": "Gemini OpenAI 兼容接口",
+        "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
+        "model": "gemini-2.5-flash",
+        "qualityModel": "gemini-2.5-pro",
+        "docsUrl": "https://ai.google.dev/gemini-api/docs/openai",
+    },
+    {
+        "id": "siliconflow",
+        "label": "SiliconFlow",
+        "description": "多模型聚合 API",
+        "baseUrl": "https://api.siliconflow.cn/v1",
+        "model": "deepseek-ai/DeepSeek-V3",
+        "qualityModel": "Pro/deepseek-ai/DeepSeek-R1",
+        "docsUrl": "https://docs.siliconflow.cn/",
+    },
+    {
+        "id": "openrouter",
+        "label": "OpenRouter",
+        "description": "多厂商模型聚合 API",
+        "baseUrl": "https://openrouter.ai/api/v1",
+        "model": "deepseek/deepseek-chat",
+        "qualityModel": "openai/gpt-5",
+        "docsUrl": "https://openrouter.ai/docs/api-reference/overview",
+    },
+)
+
+
+def public_llm_presets() -> list[dict[str, str]]:
+    return deepcopy(list(LLM_PRESETS))

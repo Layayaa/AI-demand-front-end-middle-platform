@@ -1,10 +1,10 @@
 {
   "settings": {
-    "aiMode": "builtin",
+    "aiMode": "llm",
     "llm": {
-      "baseUrl": "https://api.deepseek.com",
+      "baseUrl": "https://api.aicodemirror.ai/api/codex/backend-api/codex/v1",
       "apiKey": "",
-      "model": "deepseek-chat"
+      "model": "gpt-5.5"
     },
     "knowledge": {
       "enabled": false,
