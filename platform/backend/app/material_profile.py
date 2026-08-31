@@ -158,6 +158,8 @@ def resolve_material_candidate(
     if not _has_value(value):
         raise ValueError("接受的字段值不能为空")
     _set_profile_field(result, field, value)
+    if field == "steps":
+        result["closedLists"] = list(dict.fromkeys([*result.get("closedLists", []), field]))
     selected["status"] = "accepted"
     selected["acceptedValue"] = value
     for item in candidates:
@@ -285,16 +287,24 @@ def _labeled_value(text: str, labels: tuple[str, ...]) -> str:
     labels_pattern = "|".join(re.escape(item) for item in labels)
     match = re.search(rf"(?:^|\n)\s*(?:{labels_pattern})\s*[：:]\s*([^\n]{{2,500}})", text)
     if match:
-        return match.group(1).strip()
+        value = match.group(1).strip()
+        return "" if _looks_like_template_value(value) else value
     for line in text.splitlines():
         cells = [cell.strip() for cell in line.split("|")]
         for index, cell in enumerate(cells):
             if cell not in labels:
                 continue
             value = next((candidate for candidate in cells[index + 1 :] if candidate), "")
-            if value:
+            if value and not _looks_like_template_value(value):
                 return value[:500]
     return ""
+
+
+def _looks_like_template_value(value: str) -> bool:
+    normalized = value.strip()
+    if normalized in {"负责人", "每次耗时", "涉及人数", "价值大小", "每天/每周/每月", "高/中/低"}:
+        return True
+    return normalized.startswith(("这个SOP为什么存在", "（用一段话讲清楚", "(用一段话讲清楚", "如："))
 
 
 def _material_chunks(chunks: list[dict[str, str]], parser_type: str) -> list[dict[str, str]]:
@@ -342,7 +352,12 @@ def _infer_unstructured_context(
     filename: str,
     evidence: list[dict[str, str]],
 ) -> None:
-    full_text = "\n".join(chunk["text"] for chunk in chunks)
+    full_text = "\n".join(
+        line
+        for chunk in chunks
+        for line in chunk["text"].splitlines()
+        if "【技术填】" not in line and "如：" not in line and not line.lstrip().startswith("# |")
+    )
     first_locator = chunks[0]["locator"] if chunks else "正文"
     systems = [
         name

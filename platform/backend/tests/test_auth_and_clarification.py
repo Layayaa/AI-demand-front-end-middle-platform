@@ -644,6 +644,33 @@ SOP名称 |  | 示例流程，不应进入业务画像
         self.assertEqual(len(candidates["steps"]["value"]), 2)
         self.assertNotIn("示例日报", str(candidates))
         self.assertEqual(candidates["steps"]["locator"], "工作表：SOP流程拆解")
+        accepted = resolve_material_candidate(
+            profile,
+            candidate_id=candidates["steps"]["id"],
+            action="accept",
+        )
+        self.assertNotIn("steps", {gap["key"] for gap in gaps_for(accepted)})
+
+    def test_unfilled_research_template_prompts_do_not_become_business_facts(self) -> None:
+        text = """[工作表：SOP流程拆解]
+SOP名称 |  |  |  |  | 负责人
+流程目的 |  | 这个SOP为什么存在？服务哪个业务目标？
+频率 |  | 每天/每周/每月 | 每次耗时 |  | 涉及人数
+SOP完整文字描述 |  | （用一段话讲清楚整个流程）如：从客服系统导出记录
+序号 | 具体动作 | 输入（需要什么） | 数据来源（哪个系统/哪来）【技术填】
+# |  |  | 如：客服系统/ERP/生意参谋
+1 | 提供产品拍照图 | 产品照片 |
+"""
+        profile = add_material_candidates(
+            new_profile(title="销售流程", department="销售", summary="", requirement_type="sop"),
+            source_id="blank-template",
+            filename="销售流程.xlsx",
+            parser_type="xlsx",
+            text=text,
+        )
+        candidates = {item["field"]: item for item in profile["materialCandidates"]}
+        self.assertEqual(set(candidates), {"steps"})
+        self.assertEqual(candidates["steps"]["value"][0]["description"], "提供产品拍照图")
 
     def test_material_candidate_does_not_become_confirmed_before_acceptance(self) -> None:
         profile = new_profile(
