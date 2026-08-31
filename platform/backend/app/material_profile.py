@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import re
 from copy import deepcopy
+from hashlib import sha256
 from typing import Any
 
-from .clarification import completeness_of, detect_type, normalize_profile
+from .clarification import completeness_of, detect_type, new_profile, normalize_profile
 
 
 FIELD_PATTERNS = {
@@ -63,6 +64,183 @@ def merge_material_into_profile(
     result["sourceEvidence"] = _dedupe(evidence)
     result["completeness"] = completeness_of(result)
     return result
+
+
+def add_material_candidates(
+    profile: dict[str, Any],
+    *,
+    source_id: str,
+    filename: str,
+    text: str,
+    parser_type: str,
+) -> dict[str, Any]:
+    """Extract material claims without treating them as user-confirmed facts."""
+    result = normalize_profile(deepcopy(profile))
+    empty = new_profile_like(result)
+    extracted = merge_material_into_profile(
+        empty,
+        filename=filename,
+        text=text,
+        parser_type=parser_type,
+    )
+    candidates = list(result.get("materialCandidates") or [])
+    existing_ids = {str(item.get("id")) for item in candidates if isinstance(item, dict)}
+
+    evidence_by_field: dict[str, list[dict[str, str]]] = {}
+    for evidence in extracted.get("sourceEvidence") or []:
+        if isinstance(evidence, dict):
+            evidence_by_field.setdefault(str(evidence.get("field") or ""), []).append(evidence)
+
+    for field, value in _candidate_values(extracted).items():
+        if not _has_value(value):
+            continue
+        evidence = evidence_by_field.get(field) or []
+        locator = str(evidence[0].get("locator") or "正文") if evidence else "正文"
+        excerpt = str(evidence[0].get("excerpt") or _display_value(value))[:300] if evidence else _display_value(value)[:300]
+        candidate_id = sha256(
+            f"{source_id}\0{field}\0{_display_value(value)}\0{locator}".encode("utf-8")
+        ).hexdigest()[:24]
+        if candidate_id in existing_ids:
+            continue
+        candidates.append(
+            {
+                "id": candidate_id,
+                "field": field,
+                "value": value,
+                "sourceId": source_id,
+                "source": filename,
+                "locator": locator,
+                "excerpt": excerpt,
+                "status": "pending",
+            }
+        )
+        existing_ids.add(candidate_id)
+
+    result["materialCandidates"] = _mark_conflicts(candidates)
+    return result
+
+
+def resolve_material_candidate(
+    profile: dict[str, Any],
+    *,
+    candidate_id: str,
+    action: str,
+    edited_value: Any = None,
+) -> dict[str, Any]:
+    result = normalize_profile(deepcopy(profile))
+    candidates = list(result.get("materialCandidates") or [])
+    selected = next(
+        (item for item in candidates if isinstance(item, dict) and item.get("id") == candidate_id),
+        None,
+    )
+    if selected is None:
+        raise ValueError("材料候选项不存在")
+    if selected.get("status") not in {"pending", "conflict"}:
+        raise ValueError("该材料候选项已经处理")
+    if action == "reject":
+        selected["status"] = "rejected"
+        result["materialCandidates"] = _mark_conflicts(candidates)
+        return result
+    if action not in {"accept", "edit"}:
+        raise ValueError("不支持的材料确认操作")
+
+    field = str(selected.get("field") or "")
+    value = edited_value if action == "edit" else selected.get("value")
+    value = _normalize_candidate_value(field, value)
+    if not _has_value(value):
+        raise ValueError("接受的字段值不能为空")
+    _set_profile_field(result, field, value)
+    selected["status"] = "accepted"
+    selected["acceptedValue"] = value
+    for item in candidates:
+        if item is selected or not isinstance(item, dict):
+            continue
+        if item.get("field") == selected.get("field") and item.get("status") in {"pending", "conflict"}:
+            item["status"] = "superseded"
+    evidence = list(result.get("sourceEvidence") or [])
+    evidence.append(
+        {
+            "field": selected["field"],
+            "source": selected["source"],
+            "locator": selected["locator"],
+            "excerpt": _display_value(value)[:300],
+            "status": "accepted",
+            "candidateId": candidate_id,
+        }
+    )
+    result["sourceEvidence"] = _dedupe(evidence)
+    result["materialCandidates"] = _mark_conflicts(candidates)
+    result["completeness"] = completeness_of(result)
+    return result
+
+
+def new_profile_like(profile: dict[str, Any]) -> dict[str, Any]:
+    target = profile.get(profile.get("type") or "") or {}
+    return new_profile(
+        title=str(target.get("name") or ""),
+        department=str(target.get("department") or ""),
+        summary="",
+        requirement_type=profile.get("type"),
+    )
+
+
+def _candidate_values(profile: dict[str, Any]) -> dict[str, Any]:
+    context = profile.get("businessContext") or {}
+    target = profile.get(profile.get("type") or "") or {}
+    values = {key: context.get(key) for key in FIELD_PATTERNS}
+    values["purpose"] = target.get("purpose")
+    values["steps"] = target.get("steps")
+    return values
+
+
+def _set_profile_field(profile: dict[str, Any], field: str, value: Any) -> None:
+    if field in FIELD_PATTERNS:
+        profile["businessContext"][field] = value
+        return
+    target = profile.get(profile.get("type") or "")
+    if isinstance(target, dict) and field in {"purpose", "steps"}:
+        target[field] = value
+        return
+    raise ValueError("材料候选字段不受支持")
+
+
+def _normalize_candidate_value(field: str, value: Any) -> Any:
+    if field == "steps" and isinstance(value, str):
+        parts = [item.strip() for item in re.split(r"[\n；;]+", value) if item.strip()]
+        return [
+            {"order": index, "description": re.sub(r"^\d+[.、)]\s*", "", item)}
+            for index, item in enumerate(parts, start=1)
+        ]
+    if field != "steps" and not isinstance(value, str):
+        return _display_value(value)
+    return value
+
+
+def _mark_conflicts(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    active_by_field: dict[str, set[str]] = {}
+    for item in candidates:
+        if isinstance(item, dict) and item.get("status") in {"pending", "conflict"}:
+            active_by_field.setdefault(str(item.get("field") or ""), set()).add(
+                _display_value(item.get("value"))
+            )
+    for item in candidates:
+        if not isinstance(item, dict) or item.get("status") not in {"pending", "conflict"}:
+            continue
+        item["status"] = "conflict" if len(active_by_field.get(str(item.get("field") or ""), set())) > 1 else "pending"
+    return candidates
+
+
+def _display_value(value: Any) -> str:
+    if isinstance(value, list):
+        return "；".join(
+            str(item.get("description") or item) if isinstance(item, dict) else str(item)
+            for item in value
+        )
+    return str(value or "")
+
+
+def _has_value(value: Any) -> bool:
+    return bool(value) if not isinstance(value, str) else bool(value.strip())
 
 
 def _chunks(text: str, parser_type: str) -> list[dict[str, str]]:

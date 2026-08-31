@@ -202,6 +202,19 @@ export type RequirementProfile = {
     locator: string
     excerpt: string
   }>
+  materialCandidates: MaterialCandidate[]
+}
+
+export type MaterialCandidate = {
+  id: string
+  field: string
+  value: unknown
+  sourceId: string
+  source: string
+  locator: string
+  excerpt: string
+  status: 'pending' | 'conflict' | 'accepted' | 'rejected' | 'superseded'
+  acceptedValue?: unknown
 }
 
 export type RequirementGap = {

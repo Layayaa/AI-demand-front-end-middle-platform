@@ -323,7 +323,7 @@ def normalize_profile(value: dict[str, Any]) -> dict[str, Any]:
     existing_context = value.get("businessContext")
     base = new_profile(title="", department="", summary="", requirement_type=None)
     profile = deepcopy(base)
-    for key in ("type", "stage", "activeQuestion", "aiJudged", "aiGaps", "skipped", "closedLists", "notes", "sourceEvidence"):
+    for key in ("type", "stage", "activeQuestion", "aiJudged", "aiGaps", "skipped", "closedLists", "notes", "sourceEvidence", "materialCandidates"):
         if key in value:
             profile[key] = value[key]
     for kind in ("decision", "sop"):
@@ -343,6 +343,7 @@ def normalize_profile(value: dict[str, Any]) -> dict[str, Any]:
     profile["closedLists"] = list(dict.fromkeys(profile.get("closedLists") or []))
     profile["notes"] = list(profile.get("notes") or [])
     profile["sourceEvidence"] = list(profile.get("sourceEvidence") or [])
+    profile["materialCandidates"] = list(profile.get("materialCandidates") or [])
     profile["completeness"] = completeness_of(profile)
     return profile
 
@@ -412,9 +413,30 @@ def apply_answer(profile: dict[str, Any], answer: str) -> dict[str, Any]:
             profile["stage"] = "done"
             profile["completeness"] = completeness_of(profile)
             return {"profile": profile, "changed": True, "done": True}
-        if text not in {"继续补充", "补充"}:
+        continue_requested = wants_more_clarification(text)
+        if text not in {"继续补充", "补充"} and not continue_requested:
             profile["notes"].append(text)
         profile["stage"] = "clarifying"
+        if continue_requested:
+            gap = next(
+                (
+                    item
+                    for item in confirmation_gaps_for(profile)
+                    if item.get("key") != "materialReview"
+                ),
+                None,
+            )
+            key = str(gap.get("key")) if gap else ""
+            question = question_by_key(profile, key) if key else None
+            if question is None:
+                question = _next_unanswered_question(profile, excluded=set())
+            if question is not None:
+                profile["activeQuestion"] = {
+                    "key": question["key"],
+                    "content": question["prompt"],
+                    "chips": list(question.get("chips") or []),
+                }
+            return {"profile": profile, "changed": True, "reason": "continue_requested"}
         return {"profile": profile, "changed": True, "reason": "continue_clarification"}
 
     active_question = active_question_for(profile)
@@ -435,11 +457,27 @@ def apply_answer(profile: dict[str, Any], answer: str) -> dict[str, Any]:
                 profile["businessContext"]["businessChain"] = business_chain
                 profile["businessContext"]["candidateSignals"] = candidate_signals(business_chain)
             else:
-                # The AI may ask about the business chain, but the requester
-                # is free to answer with a business fact instead. Keep it for
-                # the next model turn instead of forcing a menu choice.
-                profile["businessContext"]["businessObject"] = text
-                profile["notes"].append(text)
+                detected_type = detect_type(text)
+                recorded_object = detected_type is None
+                if detected_type is not None:
+                    profile["type"] = detected_type
+                else:
+                    # The requester may answer with a business fact instead of
+                    # choosing a chain. Preserve it, then ask the chain once more.
+                    profile["businessContext"]["businessObject"] = text
+                    profile["notes"].append(text)
+                profile["activeQuestion"] = {
+                    "key": "businessChain",
+                    "content": BUSINESS_CHAIN_QUESTION["prompt"],
+                    "chips": list(BUSINESS_CHAIN_QUESTION.get("chips") or []),
+                }
+                profile["completeness"] = completeness_of(profile)
+                return {
+                    "profile": profile,
+                    "changed": True,
+                    "reason": "business_chain_unclear",
+                    "recordedBusinessObject": recorded_object,
+                }
         else:
             profile["businessContext"][key] = text
         profile["completeness"] = completeness_of(profile)
@@ -871,6 +909,26 @@ def confirmation_gaps_for(profile: dict[str, Any]) -> list[dict[str, str]]:
     gaps: list[dict[str, str]] = []
     context = profile.get("businessContext") or {}
 
+    pending_material = [
+        item
+        for item in profile.get("materialCandidates") or []
+        if isinstance(item, dict) and item.get("status") in {"pending", "conflict"}
+    ]
+    if pending_material:
+        conflict_count = sum(item.get("status") == "conflict" for item in pending_material)
+        gaps.append(
+            {
+                "key": "materialReview",
+                "label": "材料提取确认",
+                "severity": "high",
+                "reason": (
+                    f"还有 {len(pending_material)} 条材料候选未处理，其中 {conflict_count} 条存在来源冲突。"
+                    if conflict_count
+                    else f"还有 {len(pending_material)} 条材料候选需要接受、修改或驳回。"
+                ),
+            }
+        )
+
     if profile.get("type") not in {"decision", "sop"}:
         gaps.append(
             {
@@ -1133,6 +1191,21 @@ def is_confirm(value: str) -> bool:
     }
 
 
+def wants_more_clarification(value: str) -> bool:
+    normalized = normalize_text(value).lower()
+    return any(
+        signal in normalized
+        for signal in (
+            "继续指出",
+            "继续问",
+            "继续澄清",
+            "还需要明确",
+            "影响方案",
+            "有问题继续",
+        )
+    )
+
+
 def display(value: Any) -> str:
     return str(value) if _field_is_filled(value) else "待确认"
 
@@ -1259,21 +1332,22 @@ def _apply_value(target: dict[str, Any], requirement_type: str, key: str, text: 
         )
         return True
     if key == "steps":
-        target[key].append(
-            {
-                "seq": len(target[key]) + 1,
-                "action": text,
-                "input": "",
-                "output": "",
-                "trigger": "",
-                "type": extract_step_type(text),
-                "minutes": extract_minutes(text),
-                "source": extract_source(text),
-                "method": extract_method(text),
-                "note": "",
-                "reason": "",
-            }
-        )
+        for action in split_steps(text):
+            target[key].append(
+                {
+                    "seq": len(target[key]) + 1,
+                    "action": action,
+                    "input": "",
+                    "output": "",
+                    "trigger": "",
+                    "type": extract_step_type(action),
+                    "minutes": extract_minutes(action),
+                    "source": extract_source(action),
+                    "method": extract_method(action),
+                    "note": "",
+                    "reason": "",
+                }
+            )
         return True
     return False
 
@@ -1345,7 +1419,27 @@ def extract_minutes(text: str) -> Optional[int]:
 
 def extract_people(text: str) -> Optional[int]:
     matched = re.search(r"(\d+)\s*(?:个)?人", text)
-    return int(matched.group(1)) if matched else None
+    if matched:
+        return int(matched.group(1))
+    bare = re.fullmatch(r"\s*(\d{1,3})\s*", text)
+    return int(bare.group(1)) if bare else None
+
+
+def split_steps(text: str) -> list[str]:
+    numbered = [
+        match.group(1).strip(" 。；;")
+        for match in re.finditer(
+            r"(?:^|\n|(?<=[。；;]))\s*(?:第?[一二三四五六七八九十]+步|\d+[.、)])\s*[：:]?\s*([^\n。；;]+)",
+            text,
+        )
+        if match.group(1).strip(" 。；;")
+    ]
+    if len(numbered) >= 2:
+        return numbered
+    sentences = [item.strip() for item in re.split(r"[。；;\n]+", text) if item.strip()]
+    if len(sentences) >= 2 and all(len(item) >= 4 for item in sentences):
+        return sentences[:20]
+    return [text]
 
 
 def extract_source(text: str) -> str:

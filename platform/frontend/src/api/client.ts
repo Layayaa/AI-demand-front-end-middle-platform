@@ -221,6 +221,14 @@ export const api = {
   uploadKnowledgeFile: (file: File) => apiUpload<KnowledgeFile>('/api/knowledge/files', file),
   clarification: (projectId: string) =>
     apiGet<ClarificationSession>(`/api/projects/${encodeURIComponent(projectId)}/clarification`),
+  resolveMaterialCandidate: (
+    projectId: string,
+    payload: { candidate_id: string; action: 'accept' | 'edit' | 'reject'; value?: unknown },
+  ) =>
+    apiPost<ClarificationSession>(
+      `/api/projects/${encodeURIComponent(projectId)}/material-candidates/resolve`,
+      payload,
+    ),
   sendClarificationMessage: (
     projectId: string,
     content: string,

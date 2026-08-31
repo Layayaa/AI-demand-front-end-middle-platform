@@ -70,7 +70,7 @@ from .database import (
 from .document_parser import DocumentParseError, parse_document, parser_type_for
 from .docx_export import render_document_docx, safe_docx_filename
 from .knowledge import collect_plan_references, list_uploaded_knowledge_files
-from .material_profile import merge_material_into_profile
+from .material_profile import add_material_candidates, resolve_material_candidate
 from .llm_presets import public_llm_presets
 from .llm import (
     LlmClientError,
@@ -172,6 +172,12 @@ class ClarificationMessageRequest(BaseModel):
         if not value:
             raise ValueError("回答不能为空")
         return value
+
+
+class MaterialCandidateDecisionRequest(BaseModel):
+    candidate_id: str = Field(min_length=1, max_length=64)
+    action: Literal["accept", "edit", "reject"]
+    value: Any = None
 
 
 class ReviewRequest(BaseModel):
@@ -937,8 +943,9 @@ async def upload_project_file(
         )
         if extracted_text.strip():
             profile, _ = _profile_for_project(project)
-            enriched_profile = merge_material_into_profile(
+            enriched_profile = add_material_candidates(
                 profile,
+                source_id=source_file["id"],
                 filename=original_filename,
                 text=extracted_text,
                 parser_type=parser_type,
@@ -960,6 +967,33 @@ async def upload_project_file(
     except Exception as exc:
         raise database_unavailable(exc) from exc
     return _file_summary(source_file)
+
+
+@app.post("/api/projects/{project_id}/material-candidates/resolve")
+def resolve_project_material_candidate(
+    project_id: str,
+    payload: MaterialCandidateDecisionRequest,
+    user: dict = Depends(current_user),
+) -> dict:
+    project = project_for_user(project_id, user)
+    if user["role"] != "requester":
+        raise HTTPException(status_code=403, detail="仅需求人可以确认材料提取结果")
+    try:
+        profile, _ = _profile_for_project(project)
+        resolved = resolve_material_candidate(
+            profile,
+            candidate_id=payload.candidate_id,
+            action=payload.action,
+            edited_value=payload.value,
+        )
+        saved = _save_profile_for_project(project, resolved)
+        return _clarification_payload(project, resolved, saved["id"])
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise database_unavailable(exc) from exc
 
 
 @app.get("/api/projects/{project_id}/clarification")
@@ -1118,10 +1152,11 @@ async def _process_clarification_message(
         )
         result = apply_answer(profile, payload.content)
         profile = result["profile"]
-        profile["activeQuestion"] = None
+        if result.get("reason") not in {"continue_requested", "business_chain_unclear"}:
+            profile["activeQuestion"] = None
 
         llm_directed = False
-        if profile["stage"] != "done" and result.get("reason") != "confirmation_blocked":
+        if profile["stage"] != "done" and result.get("reason") not in {"confirmation_blocked", "continue_requested", "business_chain_unclear"}:
             try:
                 if emit_event is not None:
                     await emit_event({"type": "status", "message": "正在分析你的回答…"})
@@ -1168,8 +1203,12 @@ async def _process_clarification_message(
             profile["activeQuestion"] = {
                 "key": "businessChain",
                 "content": (
-                    f"我先把“{payload.content.strip()}”记录为业务对象。"
-                    "现在还需要确认它属于哪条七邦业务链路，请选择最接近的一项。"
+                    (
+                        f"我先把“{payload.content.strip()}”记录为业务对象。"
+                        if result.get("recordedBusinessObject")
+                        else "需求形态已记录。"
+                    )
+                    + "现在还需要确认它属于哪条七邦业务链路，请选择最接近的一项。"
                 ),
                 "chips": [
                     "商品、库存与商品后台运营",

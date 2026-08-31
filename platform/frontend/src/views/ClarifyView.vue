@@ -8,6 +8,7 @@ import type {
   ClarificationStreamEvent,
   ConversationTurn,
   SourceFile,
+  MaterialCandidate,
 } from '../api/types'
 
 
@@ -25,6 +26,7 @@ const attachmentError = ref('')
 const clarification = ref<ClarificationSession | null>(null)
 const transcript = ref<HTMLElement | null>(null)
 const answeringQuestion = ref('')
+const resolvingCandidateId = ref('')
 
 const canReply = computed(() => {
   const current = clarification.value
@@ -109,6 +111,59 @@ const profileFacts = computed(() => {
     ['目的', valueOf(target.purpose)],
   ]
 })
+
+const materialCandidates = computed(() =>
+  (clarification.value?.profile.materialCandidates ?? []).filter((item) =>
+    ['pending', 'conflict'].includes(item.status),
+  ),
+)
+
+const candidateFieldLabels: Record<string, string> = {
+  businessObject: '业务对象',
+  scope: '适用范围',
+  currentProcess: '当前处理方式',
+  dataDefinition: '数据口径',
+  systemLandscape: '涉及系统',
+  approvalBoundary: '人工/审批边界',
+  successMetric: '成功指标',
+  purpose: '需求目的',
+  steps: '流程步骤',
+}
+
+function candidateValue(candidate: MaterialCandidate) {
+  if (Array.isArray(candidate.value)) {
+    return candidate.value
+      .map((item) => typeof item === 'object' && item && 'description' in item
+        ? String((item as { description: unknown }).description)
+        : String(item))
+      .join('；')
+  }
+  return String(candidate.value ?? '')
+}
+
+async function resolveCandidate(candidate: MaterialCandidate, action: 'accept' | 'edit' | 'reject') {
+  if (resolvingCandidateId.value) return
+  let value: unknown = undefined
+  if (action === 'edit') {
+    const edited = window.prompt('修改后写入正式需求画像：', candidateValue(candidate))
+    if (edited === null) return
+    value = edited.trim()
+    if (!value) return
+  }
+  resolvingCandidateId.value = candidate.id
+  error.value = ''
+  try {
+    clarification.value = await api.resolveMaterialCandidate(projectId.value, {
+      candidate_id: candidate.id,
+      action,
+      value,
+    })
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : '材料候选处理失败'
+  } finally {
+    resolvingCandidateId.value = ''
+  }
+}
 
 function valueOf(value: unknown) {
   return typeof value === 'string' && value ? value : '待确认'
@@ -408,6 +463,29 @@ watch(projectId, load)
       </section>
 
       <aside class="clarify-side">
+        <section v-if="materialCandidates.length" class="card card-pad gap-card">
+          <div class="section-label">Material review / 材料提取确认</div>
+          <div class="card-title mt8">确认后才写入正式画像</div>
+          <p class="card-sub">材料内容可能过期或互相冲突。请接受、修改或驳回每条候选信息。</p>
+          <div class="gap-list mt16">
+            <div v-for="candidate in materialCandidates" :key="candidate.id" class="gap-item">
+              <div class="flex-between gap8">
+                <strong>{{ candidateFieldLabels[candidate.field] ?? candidate.field }}</strong>
+                <span class="badge" :class="candidate.status === 'conflict' ? 'warn' : 'muted'">
+                  {{ candidate.status === 'conflict' ? '来源冲突' : '待确认' }}
+                </span>
+              </div>
+              <span>{{ candidateValue(candidate) }}</span>
+              <small>{{ candidate.source }} · {{ candidate.locator }}</small>
+              <div class="flex gap8 mt8">
+                <button class="btn btn-primary" type="button" :disabled="Boolean(resolvingCandidateId)" @click="resolveCandidate(candidate, 'accept')">接受</button>
+                <button class="btn secondary" type="button" :disabled="Boolean(resolvingCandidateId)" @click="resolveCandidate(candidate, 'edit')">修改后接受</button>
+                <button class="btn ghost" type="button" :disabled="Boolean(resolvingCandidateId)" @click="resolveCandidate(candidate, 'reject')">驳回</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section class="card card-pad business-context-card">
           <div class="section-label">Business context / 业务上下文</div>
           <div class="card-title mt8">已确认业务事实</div>

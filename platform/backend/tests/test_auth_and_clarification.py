@@ -20,6 +20,7 @@ from app.clarification import (
     apply_answer,
     confirmation_gaps_for,
     extract_minutes,
+    extract_people,
     extract_value,
     gaps_for,
     new_profile,
@@ -27,12 +28,17 @@ from app.clarification import (
     questions_for,
     visible_gaps_for,
     _next_unanswered_question,
+    split_steps,
 )
 from app.config import Settings
 from app.document_parser import parse_document, parser_type_for
 from app.docx_export import render_document_docx
 from app.knowledge import collect_plan_references
-from app.material_profile import merge_material_into_profile
+from app.material_profile import (
+    add_material_candidates,
+    merge_material_into_profile,
+    resolve_material_candidate,
+)
 from app.main import _requester_document
 from app.assessment import assess, merge_model_assessment
 from app.llm import (
@@ -63,6 +69,39 @@ class AuthTests(unittest.TestCase):
 
 
 class ClarificationTests(unittest.TestCase):
+    def test_continue_request_from_confirmation_moves_to_a_real_gap(self) -> None:
+        profile = new_profile(
+            title="退款审核", department="客服", summary="", requirement_type="sop"
+        )
+        profile["stage"] = "confirm"
+        profile["aiJudged"] = True
+        profile["businessContext"]["businessObject"] = "退款申请"
+        result = apply_answer(
+            profile,
+            "这部分先按当前口径执行；如果会影响方案设计，请继续指出需要明确的边界。",
+        )
+        self.assertEqual(result["reason"], "continue_requested")
+        self.assertEqual(result["profile"]["stage"], "clarifying")
+        self.assertNotEqual(result["profile"]["activeQuestion"]["key"], "other")
+
+    def test_bare_number_is_accepted_for_people(self) -> None:
+        self.assertEqual(extract_people("3"), 3)
+        self.assertEqual(extract_people("3人"), 3)
+
+    def test_multi_sentence_step_answer_is_split_into_steps(self) -> None:
+        answer = (
+            "系统同步订单和物流数据。"
+            "系统校验退款金额与订单状态。"
+            "高金额或证据不足的工单转人工复核。"
+        )
+        self.assertEqual(len(split_steps(answer)), 3)
+        profile = new_profile(
+            title="退款审核", department="客服", summary="", requirement_type="sop"
+        )
+        profile["activeQuestion"] = {"key": "steps", "content": "请描述流程", "chips": []}
+        result = apply_answer(profile, answer)
+        self.assertEqual(len(result["profile"]["sop"]["steps"]), 3)
+
     def _answer_business_context(self, profile, answers):
         for answer in answers:
             profile = apply_answer(profile, answer)["profile"]
@@ -394,6 +433,21 @@ class ClarificationTests(unittest.TestCase):
         self.assertEqual(profile["businessContext"]["businessChain"], "")
         self.assertIn("全量公开商品", profile["notes"])
 
+    def test_type_answer_during_business_chain_question_does_not_pollute_object(self) -> None:
+        profile = new_profile(
+            title="周预测表", department="计划部", summary="", requirement_type=None
+        )
+        profile["activeQuestion"] = {
+            "key": "businessChain",
+            "content": "请选择业务链路",
+            "chips": [],
+        }
+        result = apply_answer(profile, "按步骤跑一条流程")
+        self.assertEqual(result["reason"], "business_chain_unclear")
+        self.assertEqual(result["profile"]["type"], "sop")
+        self.assertEqual(result["profile"]["businessContext"]["businessObject"], "")
+        self.assertEqual(result["profile"]["activeQuestion"]["key"], "businessChain")
+
     def test_confirm_button_cannot_bypass_missing_minimum_evidence(self) -> None:
         profile = new_profile(
             title="唯品会",
@@ -562,6 +616,82 @@ class ClarificationTests(unittest.TestCase):
 
 
 class PlanTests(unittest.TestCase):
+    def test_material_candidate_does_not_become_confirmed_before_acceptance(self) -> None:
+        profile = new_profile(
+            title="库存设置", department="运营", summary="", requirement_type="sop"
+        )
+        proposed = add_material_candidates(
+            profile,
+            source_id="file-1",
+            filename="库存教程.xlsx",
+            parser_type="xlsx",
+            text="[工作表：配置]\n业务对象：直营网店 SKU 库存\n人工边界：负库存转人工",
+        )
+        self.assertEqual(proposed["businessContext"]["businessObject"], "")
+        self.assertFalse(proposed.get("sourceEvidence"))
+        self.assertTrue(any(item["field"] == "businessObject" for item in proposed["materialCandidates"]))
+        self.assertEqual(confirmation_gaps_for(proposed)[0]["key"], "materialReview")
+
+    def test_material_candidates_detect_conflict_and_accept_one_source(self) -> None:
+        profile = new_profile(
+            title="库存设置", department="运营", summary="", requirement_type="sop"
+        )
+        profile = add_material_candidates(
+            profile,
+            source_id="file-1",
+            filename="旧流程.xlsx",
+            parser_type="xlsx",
+            text="[工作表：配置]\n数据口径：可售库存等于实物库存减锁定库存",
+        )
+        profile = add_material_candidates(
+            profile,
+            source_id="file-2",
+            filename="新流程.docx",
+            parser_type="docx",
+            text="[段落 8]\n数据口径：可售库存等于实物库存减锁定库存减预售占用",
+        )
+        candidates = [item for item in profile["materialCandidates"] if item["field"] == "dataDefinition"]
+        self.assertEqual(len(candidates), 2)
+        self.assertTrue(all(item["status"] == "conflict" for item in candidates))
+
+        resolved = resolve_material_candidate(
+            profile, candidate_id=candidates[1]["id"], action="accept"
+        )
+        self.assertIn("预售占用", resolved["businessContext"]["dataDefinition"])
+        self.assertEqual(candidates[0]["status"], "conflict")
+        statuses = {
+            item["source"]: item["status"]
+            for item in resolved["materialCandidates"]
+            if item["field"] == "dataDefinition"
+        }
+        self.assertEqual(statuses["新流程.docx"], "accepted")
+        self.assertEqual(statuses["旧流程.xlsx"], "superseded")
+        self.assertEqual(resolved["sourceEvidence"][-1]["status"], "accepted")
+
+    def test_material_candidate_can_be_edited_or_rejected(self) -> None:
+        profile = add_material_candidates(
+            new_profile(title="库存设置", department="运营", summary="", requirement_type="sop"),
+            source_id="file-1",
+            filename="教程.xls",
+            parser_type="xls",
+            text="[工作表：流程]\n适用范围：全部商品\n成功指标：处理完成",
+        )
+        scope = next(item for item in profile["materialCandidates"] if item["field"] == "scope")
+        metric = next(item for item in profile["materialCandidates"] if item["field"] == "successMetric")
+        profile = resolve_material_candidate(
+            profile,
+            candidate_id=scope["id"],
+            action="edit",
+            edited_value="直营网店常规在售商品",
+        )
+        profile = resolve_material_candidate(profile, candidate_id=metric["id"], action="reject")
+        self.assertEqual(profile["businessContext"]["scope"], "直营网店常规在售商品")
+        self.assertEqual(profile["businessContext"]["successMetric"], "")
+        self.assertEqual(
+            next(item for item in profile["materialCandidates"] if item["id"] == metric["id"])["status"],
+            "rejected",
+        )
+
     def test_generated_plan_can_be_exported_as_docx(self) -> None:
         payload = {
             "title": "库存半自动产品方案",
