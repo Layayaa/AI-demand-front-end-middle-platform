@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { ArrowLeft, CheckCircle2, Paperclip, Pencil, Send, Sparkles, X } from 'lucide-vue-next'
+import { ArrowLeft, CheckCircle2, Paperclip, Send, Sparkles, X } from 'lucide-vue-next'
 import { api } from '../api/client'
 import type {
   ClarificationSession,
@@ -25,7 +25,6 @@ const uploadingAttachments = ref(false)
 const attachmentError = ref('')
 const clarification = ref<ClarificationSession | null>(null)
 const transcript = ref<HTMLElement | null>(null)
-const answerInput = ref<HTMLTextAreaElement | null>(null)
 const answeringQuestion = ref('')
 const resolvingCandidateId = ref('')
 
@@ -119,29 +118,8 @@ const materialCandidates = computed(() =>
   ),
 )
 
-const understandingSummary = computed(() => {
-  const profile = clarification.value?.profile
-  if (!profile) return ''
-  const context = profile.businessContext
-  const target = profile.type === 'decision' ? profile.decision : profile.sop
-  const typeLabel = profile.type === 'decision' ? '需要做一个业务判断' : profile.type === 'sop' ? '需要梳理一条执行流程' : '需求形态还在确认'
-  const parts = [
-    typeLabel,
-    context.businessObject ? `主要处理“${context.businessObject}”` : '',
-    context.currentProcess ? `目前的做法是：${context.currentProcess}` : '',
-    typeof target.purpose === 'string' && target.purpose ? `希望达到：${target.purpose}` : '',
-  ].filter(Boolean)
-  return parts.join('。') + '。'
-})
-
 const coreGaps = computed(() => clarification.value?.gaps.filter((gap) => gap.severity === 'high') ?? [])
 const supplementaryGaps = computed(() => clarification.value?.gaps.filter((gap) => gap.severity !== 'high') ?? [])
-
-async function prepareCorrection() {
-  answer.value = '需要修正 AI 当前的理解：'
-  await nextTick()
-  answerInput.value?.focus()
-}
 
 const candidateFieldLabels: Record<string, string> = {
   businessObject: '业务对象',
@@ -459,7 +437,6 @@ watch(projectId, load)
           <p v-if="attachmentError" class="attachment-error">{{ attachmentError }}</p>
           <form class="chat-form" @submit.prevent="send()">
             <textarea
-              ref="answerInput"
               v-model="answer"
               :disabled="sending"
               rows="3"
@@ -489,16 +466,6 @@ watch(projectId, load)
       </section>
 
       <aside class="clarify-side">
-        <section class="card card-pad understanding-card">
-          <div class="section-label">Current understanding / AI 当前理解</div>
-          <div class="card-title mt8">我目前是这样理解的</div>
-          <p class="understanding-copy">{{ understandingSummary }}</p>
-          <button class="btn btn-ghost mt8" type="button" :disabled="sending || !canReply" @click="prepareCorrection">
-            <Pencil :size="14" aria-hidden="true" />
-            <span>有一处不对，告诉 AI</span>
-          </button>
-        </section>
-
         <section v-if="materialCandidates.length" class="card card-pad gap-card">
           <div class="section-label">Material review / 材料提取确认</div>
           <div class="card-title mt8">确认后才写入正式画像</div>

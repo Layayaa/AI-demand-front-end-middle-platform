@@ -665,8 +665,6 @@ code { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monos
 .profile-progress > span { display: block; color: var(--ink-3); font-size: 12px; }
 .profile-progress > div { height: 8px; margin-top: 7px; border-radius: 999px; background: var(--muted); overflow: hidden; }
 .profile-progress i { display: block; height: 100%; border-radius: inherit; background: var(--primary); }
-.understanding-card { border-color: #c8d8ff; background: linear-gradient(145deg, #fff, #f6f9ff); }
-.understanding-copy { margin-top: 12px; color: var(--ink-2); font-size: 13px; line-height: 1.75; white-space: pre-wrap; }
 .muted-gap { border-left-color: #94a3b8; background: var(--muted); }
 .profile-facts { display: grid; gap: 0; margin-top: 12px; }
 .profile-facts > div { padding: 11px 0; border-bottom: 1px solid var(--line); }
