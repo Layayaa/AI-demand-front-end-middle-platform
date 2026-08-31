@@ -540,11 +540,21 @@ async def _direct_clarification(
         latest_answer=latest_answer,
         project_materials=project_materials or [],
     )
-    return apply_ai_direction(
+    directed = apply_ai_direction(
         profile,
         direction,
         recent_question_texts=_question_texts_from_history(history),
     )
+    if _should_end_after_round_limit(directed, history):
+        directed["stage"] = "confirm"
+        directed["activeQuestion"] = None
+        directed["aiJudged"] = True
+    return directed
+
+
+def _should_end_after_round_limit(profile: dict, history: list[dict]) -> bool:
+    user_rounds = sum(item.get("role") == "user" for item in history)
+    return user_rounds >= 10 and not confirmation_gaps_for(profile)
 
 
 def _plan_references(project: dict, profile: dict) -> list[dict]:

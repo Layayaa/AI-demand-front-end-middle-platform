@@ -48,7 +48,7 @@ async function onSubmit() {
       <div>
         <div class="page-kicker">Intake / 新建需求</div>
         <h1>新建需求</h1>
-        <p class="sub">先记录业务问题和背景，创建后即可上传材料并进入分析。</p>
+        <p class="sub">先用自己的话说出想解决的问题，AI 会一步步帮你梳理清楚。</p>
       </div>
       <RouterLink class="btn" to="/">
         <ArrowLeft :size="15" aria-hidden="true" />
@@ -58,35 +58,40 @@ async function onSubmit() {
 
     <section class="card card-pad intake-layout">
       <div>
-        <div class="section-label">Start with context / 先建立上下文</div>
-        <div class="card-title mt8">需求基本信息</div>
-        <p class="card-sub">用于建立分析上下文，不会执行库存、上下架或 ERP 动作。</p>
+        <div class="section-label">Start with a thought / 从一个想法开始</div>
+        <div class="card-title mt8">你现在想解决什么问题？</div>
+        <p class="card-sub">不需要提前准备完整需求或材料，先说清楚当前困扰即可。</p>
 
         <form class="form" @submit.prevent="onSubmit">
           <label>
             需求标题
-            <input v-model="form.title" type="text" placeholder="例如：滞销 SKU 处置判断" />
+            <input v-model="form.title" type="text" placeholder="例如：每周预测采购量太耗时间" />
           </label>
           <label>
-            提出部门
-            <input v-model="form.department" type="text" placeholder="例如：运营 / 仓储" />
+            目前的情况或困扰
+            <textarea v-model="form.summary" rows="6" placeholder="例如：每周要从几个系统导出销量、库存和在途数据，再人工判断采购量，整理一遍大约需要半天。" />
           </label>
-          <label>
-            需求形态
-            <select v-model="form.requirementType">
-              <option value="">暂不判断</option>
-              <option value="decision">单点决策</option>
-              <option value="sop">SOP 流程</option>
-            </select>
-          </label>
-          <label>
-            需求摘要
-            <textarea v-model="form.summary" rows="5" placeholder="先用一句话说明业务要解决什么问题。创建后立刻进入 AI 一问一答澄清。" />
-          </label>
+          <details class="intake-advanced">
+            <summary>我知道更多信息，可以先补充</summary>
+            <div class="form mt16">
+              <label>
+                提出部门（选填）
+                <input v-model="form.department" type="text" placeholder="例如：运营 / 仓储" />
+              </label>
+              <label>
+                需求形态（不确定可以不选）
+                <select v-model="form.requirementType">
+                  <option value="">交给 AI 判断</option>
+                  <option value="decision">需要做一个判断</option>
+                  <option value="sop">需要按步骤跑流程</option>
+                </select>
+              </label>
+            </div>
+          </details>
           <div class="actions">
             <button class="btn btn-primary" type="submit" :disabled="saving">
               <FilePlus2 v-if="!saving" :size="15" aria-hidden="true" />
-              {{ saving ? '创建中…' : '创建项目' }}
+              {{ saving ? '创建中…' : '开始 AI 梳理' }}
             </button>
           </div>
         </form>
@@ -101,15 +106,15 @@ async function onSubmit() {
         <div class="intake-steps">
           <div class="intake-step">
             <span class="intake-step-index">01</span>
-            <div><strong>创建需求上下文</strong><span>记录问题、部门与当前已知边界。</span></div>
+            <div><strong>先说出当前困扰</strong><span>不要求使用专业术语，也不要求准备材料。</span></div>
           </div>
           <div class="intake-step">
             <span class="intake-step-index">02</span>
-            <div><strong>补充材料与事实</strong><span>上传 SOP、访谈记录或已有说明。</span></div>
+            <div><strong>AI 一次问一个问题</strong><span>只追问真正影响方案的事实和边界。</span></div>
           </div>
           <div class="intake-step">
             <span class="intake-step-index">03</span>
-            <div><strong>进入前置分析</strong><span>由规则与模型共同整理下一步。</span></div>
+            <div><strong>确认 AI 的理解</strong><span>核心信息足够后即可提交，其余稍后补充。</span></div>
           </div>
         </div>
       </aside>

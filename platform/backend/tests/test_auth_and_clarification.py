@@ -39,7 +39,7 @@ from app.material_profile import (
     merge_material_into_profile,
     resolve_material_candidate,
 )
-from app.main import _requester_document
+from app.main import _requester_document, _should_end_after_round_limit
 from app.assessment import assess, merge_model_assessment
 from app.llm import (
     _parse_requirement_assessment,
@@ -69,6 +69,27 @@ class AuthTests(unittest.TestCase):
 
 
 class ClarificationTests(unittest.TestCase):
+    def test_ten_round_limit_ends_only_when_core_evidence_is_ready(self) -> None:
+        profile = new_profile(
+            title="退款审核", department="客服", summary="", requirement_type="sop"
+        )
+        profile["businessContext"].update(
+            {
+                "businessObject": "退款申请",
+                "scope": "直营网店已支付订单",
+                "currentProcess": "客服核对订单和退款原因",
+                "approvalBoundary": "高金额退款转主管确认",
+            }
+        )
+        profile["sop"]["owner"] = "客服主管"
+        profile["sop"]["purpose"] = "减少重复核对"
+        profile["sop"]["steps"] = [{"order": 1, "description": "核对订单"}]
+        profile["closedLists"] = ["steps"]
+        history = [{"role": "user"} for _ in range(10)]
+        self.assertTrue(_should_end_after_round_limit(profile, history))
+        profile["businessContext"]["approvalBoundary"] = ""
+        self.assertFalse(_should_end_after_round_limit(profile, history))
+
     def test_continue_request_from_confirmation_moves_to_a_real_gap(self) -> None:
         profile = new_profile(
             title="退款审核", department="客服", summary="", requirement_type="sop"
