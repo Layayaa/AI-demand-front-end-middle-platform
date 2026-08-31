@@ -616,6 +616,35 @@ class ClarificationTests(unittest.TestCase):
 
 
 class PlanTests(unittest.TestCase):
+    def test_ai_research_workbook_uses_business_sheet_and_pipe_delimited_cells(self) -> None:
+        text = """[工作表：SOP流程拆解]
+SOP名称 |  | 采购订单（返单）
+流程目的 |  | 按计划交期完成大货入仓，避免断货
+SOP完整文字描述 |  | 采购在金蝶云推单，经理审核后通知供应商
+序号 | 具体动作 | 输入（需要什么） | 步骤类型
+1 | 根据采购申请单在金蝶云推单 | 采购申请表 | 数据信息处理
+2 | 采购经理审核采购订单 | 采购订单 | 分析决策
+
+[工作表：类型判断指南]
+SOP名称 |  | 示例流程，不应进入业务画像
+序号 | 具体动作
+1 | 登录生意参谋并下载示例日报
+"""
+        profile = add_material_candidates(
+            new_profile(title="品牌采购", department="创研", summary="", requirement_type="sop"),
+            source_id="research-1",
+            filename="品牌采购.xlsx",
+            parser_type="xlsx",
+            text=text,
+        )
+        candidates = {item["field"]: item for item in profile["materialCandidates"]}
+        self.assertEqual(candidates["businessObject"]["value"], "采购订单（返单）")
+        self.assertIn("避免断货", candidates["purpose"]["value"])
+        self.assertIn("金蝶云推单", candidates["currentProcess"]["value"])
+        self.assertEqual(len(candidates["steps"]["value"]), 2)
+        self.assertNotIn("示例日报", str(candidates))
+        self.assertEqual(candidates["steps"]["locator"], "工作表：SOP流程拆解")
+
     def test_material_candidate_does_not_become_confirmed_before_acceptance(self) -> None:
         profile = new_profile(
             title="库存设置", department="运营", summary="", requirement_type="sop"

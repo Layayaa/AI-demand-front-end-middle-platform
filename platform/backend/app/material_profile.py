@@ -9,9 +9,16 @@ from .clarification import completeness_of, detect_type, new_profile, normalize_
 
 
 FIELD_PATTERNS = {
-    "businessObject": ("业务对象", "处理对象", "适用对象", "对象"),
+    "businessObject": ("业务对象", "处理对象", "适用对象", "SOP名称", "决策名称", "对象"),
     "scope": ("适用范围", "首期范围", "范围"),
-    "currentProcess": ("当前流程", "现状流程", "当前处理方式", "操作步骤"),
+    "currentProcess": (
+        "当前流程",
+        "现状流程",
+        "当前处理方式",
+        "SOP完整文字描述",
+        "决策链路完整描述",
+        "操作步骤",
+    ),
     "dataDefinition": ("数据口径", "字段口径", "统计口径"),
     "systemLandscape": ("涉及系统", "系统现状", "数据来源", "接口系统"),
     "approvalBoundary": ("审批边界", "人工边界", "异常处理", "人工复核"),
@@ -28,7 +35,7 @@ def merge_material_into_profile(
 ) -> dict[str, Any]:
     result = normalize_profile(deepcopy(profile))
     evidence = list(result.get("sourceEvidence") or [])
-    chunks = _chunks(text, parser_type)
+    chunks = _material_chunks(_chunks(text, parser_type), parser_type)
 
     if result.get("type") not in {"decision", "sop"}:
         detected = detect_type(text[:6000])
@@ -53,11 +60,12 @@ def merge_material_into_profile(
             evidence.append(_evidence(filename, "purpose", purpose[0], purpose[1]))
 
         if result["type"] == "sop" and not target.get("steps"):
-            steps = []
-            for chunk in chunks:
-                for match in re.finditer(r"(?:^|\n)\s*(?:步骤\s*)?(\d+)[.、)]\s*([^\n]{3,180})", chunk["text"]):
-                    steps.append({"order": len(steps) + 1, "description": match.group(2).strip()})
-                    evidence.append(_evidence(filename, "steps", match.group(2).strip(), chunk["locator"]))
+            steps = _tabular_sop_steps(chunks, filename, evidence)
+            if not steps:
+                for chunk in chunks:
+                    for match in re.finditer(r"(?:^|\n)\s*(?:步骤\s*)?(\d+)[.、)]\s*([^\n]{3,180})", chunk["text"]):
+                        steps.append({"order": len(steps) + 1, "description": match.group(2).strip()})
+                        evidence.append(_evidence(filename, "steps", match.group(2).strip(), chunk["locator"]))
             if steps:
                 target["steps"] = steps[:20]
 
@@ -276,7 +284,48 @@ def _chunks(text: str, parser_type: str) -> list[dict[str, str]]:
 def _labeled_value(text: str, labels: tuple[str, ...]) -> str:
     labels_pattern = "|".join(re.escape(item) for item in labels)
     match = re.search(rf"(?:^|\n)\s*(?:{labels_pattern})\s*[：:]\s*([^\n]{{2,500}})", text)
-    return match.group(1).strip() if match else ""
+    if match:
+        return match.group(1).strip()
+    for line in text.splitlines():
+        cells = [cell.strip() for cell in line.split("|")]
+        for index, cell in enumerate(cells):
+            if cell not in labels:
+                continue
+            value = next((candidate for candidate in cells[index + 1 :] if candidate), "")
+            if value:
+                return value[:500]
+    return ""
+
+
+def _material_chunks(chunks: list[dict[str, str]], parser_type: str) -> list[dict[str, str]]:
+    if parser_type not in {"xlsx", "xls"}:
+        return chunks
+    primary_names = {"工作表：SOP流程拆解", "工作表：单点决策拆解表"}
+    primary = [chunk for chunk in chunks if chunk.get("locator") in primary_names]
+    return primary or chunks
+
+
+def _tabular_sop_steps(
+    chunks: list[dict[str, str]],
+    filename: str,
+    evidence: list[dict[str, str]],
+) -> list[dict[str, Any]]:
+    steps: list[dict[str, Any]] = []
+    for chunk in chunks:
+        in_steps = False
+        for line in chunk["text"].splitlines():
+            cells = [cell.strip() for cell in line.split("|")]
+            if "序号" in cells and ("具体动作" in cells or "动作" in cells):
+                in_steps = True
+                continue
+            if not in_steps or not cells or not re.fullmatch(r"\d+", cells[0]):
+                continue
+            description = next((cell for cell in cells[1:] if cell), "")
+            if len(description) < 2:
+                continue
+            steps.append({"order": len(steps) + 1, "description": description})
+            evidence.append(_evidence(filename, "steps", description, chunk["locator"]))
+    return steps[:50]
 
 
 def _first_labeled(chunks: list[dict[str, str]], labels: tuple[str, ...]) -> tuple[str, str] | None:
